@@ -666,7 +666,7 @@ $('#add-lead').addEventListener('click', () => startLeadForm());
 
 async function loadData() {
   const [leads, status, counts, mine, sugg, members, settings] = await Promise.all([
-    sb.from('amb_leads').select('*'),
+    sb.from('amb_leads').select('*').is('archived_at', null),   // les immeubles archivés ne s'affichent plus
     sb.from('amb_lead_status').select('*'), // vide pour les ambassadeurs (règle RLS)
     sb.rpc('amb_lead_counts'),
     sb.from('amb_contributions').select('*').eq('author_id', state.user.id),
