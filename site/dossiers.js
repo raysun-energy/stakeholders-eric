@@ -8,7 +8,7 @@ const dateFr = (d) => d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocal
 const periodLabel = (p) => p.includes('-T') ? `${p.slice(6)}${p.slice(6) === '1' ? 'er' : 'e'} trimestre ${p.slice(0, 4)}` : `Année ${p}`;
 const quarterOf = (d) => `${d.slice(0, 4)}-T${Math.floor((Number(d.slice(5, 7)) - 1) / 3) + 1}`;
 
-const state = { admin: false, org: null, orgs: [], stats: [], kind: 'trimestre', period: null, dossiers: [], invoices: [] };
+const state = { admin: false, org: null, orgs: [], stats: [], kind: 'trimestre', period: null, dossiers: [], invoices: [], messages: [], open: new Set() };
 
 function fail(e, msg = 'Une erreur est survenue. Rechargez la page.') {
   console.error(e);
@@ -29,6 +29,8 @@ async function loadSpace() {
     (org ? iq.eq('org_id', org) : iq).then(must),
   ]);
   Object.assign(state, { stats: stats ?? [], dossiers: dossiers ?? [], invoices: invoices ?? [] });
+  const ids = state.dossiers.map((d) => d.id);
+  state.messages = ids.length ? (must(await sb.from('amb_dossier_messages').select('*').in('dossier_id', ids).order('created_at')) ?? []) : [];
   renderPeriods(); renderHero(); renderDossiers(); renderInvoices();
 }
 
@@ -89,6 +91,19 @@ function renderHero() {
 
 // ---- Dossiers ---------------------------------------------------------------------
 
+// Fil de discussion d'un dossier : messages de l'équipe et de la société, puis champ de réponse.
+function fil(d) {
+  const msgs = state.messages.filter((m) => m.dossier_id === d.id);
+  const heure = (t) => new Date(t).toLocaleString('fr-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `<details class="fil"${state.open.has(d.id) ? ' open' : ''}>
+    <summary>Discussion${msgs.length ? ` (${msgs.length})` : ''}</summary>
+    ${msgs.length ? `<ol>${msgs.map((m) => `<li class="${m.from_team === state.admin ? 'moi' : ''}"><small>${esc(m.author_name || (m.from_team ? 'RaYSun' : 'Apporteur'))}${m.from_team ? ' · RaYSun' : ''} · ${esc(heure(m.created_at))}</small>${esc(m.body)}</li>`).join('')}</ol>`
+      : '<p class="meta" style="margin:8px 0">Aucun message pour le moment.</p>'}
+    <form data-fil><textarea rows="2" required maxlength="4000" placeholder="Votre message" aria-label="Votre message"></textarea><button class="btn primary" type="submit">Envoyer</button></form>
+    ${state.admin ? `<p class="meta" style="margin:6px 0 0">${d.odoo_lead_id ? 'Chaque message est aussi noté sur la fiche Odoo du prospect.' : 'Dossier non relié à une fiche Odoo : les messages restent ici.'}</p>` : ''}
+  </details>`;
+}
+
 function renderDossiers() {
   const orgName = (id) => state.orgs.find((o) => o.id === id)?.name ?? '';
   $('#dossiers-title').textContent = state.admin ? (state.org ? `Dossiers de ${orgName(state.org)}` : 'Tous les dossiers') : 'Vos dossiers';
@@ -130,6 +145,7 @@ function renderDossiers() {
       </dl>
       ${d.message ? `<p class="msg"><b>Message de RaYSun</b>${esc(d.message)}</p>` : ''}
       ${answered}${actions}${admin}
+      ${fil(d)}
     </article>`;
   }).join('');
 }
@@ -151,6 +167,25 @@ $('#dossiers').addEventListener('click', async (e) => {
     } else return;
     await loadSpace();
   } catch (err) { btn.disabled = false; fail(err, 'Action impossible pour le moment.'); }
+});
+
+$('#dossiers').addEventListener('toggle', (e) => {
+  const det = e.target.closest?.('details.fil'); if (!det) return;
+  const id = det.closest('.dossier').dataset.id;
+  det.open ? state.open.add(id) : state.open.delete(id);
+}, true);
+
+$('#dossiers').addEventListener('submit', async (e) => {
+  const form = e.target.closest('form[data-fil]'); if (!form) return;
+  e.preventDefault();
+  const id = form.closest('.dossier').dataset.id, ta = $('textarea', form), btn = $('button', form);
+  if (!ta.value.trim()) return;
+  btn.disabled = true;
+  try {
+    must(await sb.rpc('amb_dossier_post', { p_dossier: id, p_body: ta.value }));
+    state.open.add(id);
+    await loadSpace();
+  } catch (err) { btn.disabled = false; fail(err, 'Le message n\'a pas pu être envoyé.'); }
 });
 
 // ---- Facturation --------------------------------------------------------------------
