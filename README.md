@@ -17,7 +17,7 @@ Déjà fait dans le projet Supabase **Suivi-vendeurs** : tables `amb_*`, règles
 
 Reste à faire à la main :
 
-1. **Netlify → citywatt-ambassadeurs → Project configuration → Build & deploy → Link repository** : ce dépôt, branche `claude/leads-map-platform-rzhme7`. Chaque push déploie ensuite automatiquement (`netlify.toml` publie `site/`, sans build).
+1. **Déploiement** (au 18/11/2026) : chaque push sur la branche `claude/leads-map-platform-rzhme7` déploie le site par GitHub Actions (`.github/workflows/deploiement-netlify.yml`, `netlify deploy --prod`). Secret GitHub requis : `NETLIFY_AUTH_TOKEN` (jeton d'accès personnel Netlify). Le déploiement continu de Netlify ne se déclenchait plus tout seul.
 2. **Supabase → Authentication → URL Configuration** : *Site URL* = `https://citywatt-ambassadeurs.netlify.app`, et ajouter `https://citywatt-ambassadeurs.netlify.app/**` dans *Redirect URLs*.
 3. **Supabase → Authentication → Emails → SMTP Settings** : brancher un service d'envoi (Resend, Brevo…). Sans ça, Supabase n'envoie les liens de connexion qu'aux membres de l'organisation Supabase, et au maximum quelques-uns par heure.
 

@@ -1,0 +1,40 @@
+# Déploie le site sur Netlify à chaque push sur la branche de production.
+# Remplace le déploiement continu de Netlify, qui ne se déclenche plus tout seul sur ce projet.
+# Secret requis (Settings › Secrets and variables › Actions) : NETLIFY_AUTH_TOKEN, un jeton d'accès personnel Netlify.
+# Le build (scripts/write-config.js) lit les variables d'environnement du projet Netlify, comme avant.
+name: Déploiement Netlify
+
+on:
+  push:
+    branches: [claude/leads-map-platform-rzhme7]
+  workflow_dispatch:
+
+concurrency:
+  group: deploiement-netlify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 4aa673e3-88ef-4bf6-a9bf-2bd8f91e7b5c   # citywatt-ambassadeurs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vérifier le jeton
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::Le secret NETLIFY_AUTH_TOKEN est absent : ajoutez-le dans Settings › Secrets and variables › Actions."
+            exit 1
+          fi
+      - name: Construire et déployer en production
+        run: >
+          npx --yes netlify-cli deploy --prod
+          --message "GitHub Actions : ${GITHUB_SHA::7}"
