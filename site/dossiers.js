@@ -114,6 +114,7 @@ function renderDossiers() {
         <button class="btn secondary" data-resend>Renvoyer l'e-mail</button>
         ${d.status !== 'Clôturé' ? '<button class="btn secondary" data-close>Clôturer</button>' : ''}
         <button class="link danger" data-delete>Supprimer</button></div>
+        ${d.odoo_lead_id ? `<p class="meta"><a href="https://raysun.odoo.com/odoo/crm/${Number(d.odoo_lead_id)}" target="_blank" rel="noopener">Fiche Odoo</a></p>` : ''}
         <p class="meta">${d.notified_at ? `E-mail envoyé le ${esc(dateFr(d.notified_at))}` : 'E-mail pas encore envoyé'}</p>` : '';
     return `<article class="dossier" data-id="${esc(d.id)}">
       <div><span class="st st-${esc(d.status.split(' ')[0])}">${esc(d.status)}</span></div>
@@ -213,7 +214,136 @@ function values(form) {
   return o;
 }
 
+// Liste de propositions sous un champ : chercher(q) renvoie des éléments, ligne(x) leur affichage, choisir(x) l'action.
+function suggest(input, { chercher, ligne, choisir, min = 3 }) {
+  const ul = document.createElement('ul');
+  ul.className = 'sugg'; ul.hidden = true; ul.setAttribute('role', 'listbox');
+  input.after(ul);
+  let items = [], timer = null, seq = 0;
+  const close = () => { ul.hidden = true; };
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < min) return close();
+    timer = setTimeout(async () => {
+      const n = ++seq;
+      let res = [];
+      try { res = await chercher(q); } catch (e) { console.error(e); res = { erreur: e.message }; }
+      if (n !== seq) return;                       // une frappe plus récente a pris le relais
+      if (res?.erreur) { ul.innerHTML = `<li class="info">${esc(res.erreur)}</li>`; ul.hidden = false; items = []; return; }
+      items = res ?? [];
+      if (!items.length) return close();
+      ul.innerHTML = items.map((x, k) => `<li role="option" data-k="${k}">${ligne(x)}</li>`).join('');
+      ul.hidden = false;
+    }, 300);
+  });
+  ul.addEventListener('mousedown', (e) => {         // mousedown : avant que le champ ne perde le focus
+    const li = e.target.closest('li[data-k]'); if (!li) return;
+    e.preventDefault(); close(); choisir(items[Number(li.dataset.k)]);
+  });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+}
+
+async function odooSearch(type, q) {
+  const { data, error } = await sb.functions.invoke('amb-odoo-search', { body: { type, q } });
+  if (error || data?.error) return { erreur: 'Recherche Odoo indisponible pour le moment.' };
+  return data.results;
+}
+
+// Région d'après le code postal belge.
+function regionOf(zip) {
+  const n = Number(String(zip ?? '').match(/\b\d{4}\b/)?.[0]);
+  if (!n) return null;
+  if (n <= 1299) return 'Bruxelles';
+  if ((n >= 1300 && n <= 1499) || (n >= 4000 && n <= 7999)) return 'Wallonie';
+  return 'Flandre';
+}
+
+// Adresses proposées par Google (Places). Si le service n'est pas disponible avec la clé, le champ reste une saisie libre.
+let placesReady = null;
+function loadPlaces() {
+  const key = window.CITYWATT_CONFIG.googleMapsApiKey;
+  if (!key) return Promise.resolve(false);
+  placesReady ??= new Promise((resolve) => {
+    if (window.google?.maps?.places) return resolve(true);
+    window.__amPlacesReady = () => resolve(!!window.google?.maps?.places);
+    const s = document.createElement('script');
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&language=fr&region=BE&loading=async&callback=__amPlacesReady`;
+    s.onerror = () => resolve(false);
+    document.head.append(s);
+  });
+  return placesReady;
+}
+let placesOff = false;
+async function addressSearch(q) {
+  if (placesOff || !(await loadPlaces())) return [];
+  const svc = new google.maps.places.AutocompleteService();
+  return new Promise((resolve) => svc.getPlacePredictions(
+    { input: q, componentRestrictions: { country: 'be' }, language: 'fr' },
+    (preds, status) => {
+      if (status === 'REQUEST_DENIED') placesOff = true;   // API Places non activée pour cette clé : saisie libre
+      resolve(status === 'OK' ? preds : []);
+    }));
+}
+
 function wireAdmin() {
+  // Prospect : fiches du CRM Odoo
+  const df = $('#dossier-form');
+  suggest(df.prospect, {
+    chercher: (q) => odooSearch('leads', q),
+    ligne: (l) => `<b>${esc(l.company || l.name)}</b><small>${[l.company ? l.name : null, l.contact_name, l.stage].filter(Boolean).map(esc).join(' · ')}</small>`,
+    choisir: (l) => {
+      df.prospect.value = l.company || l.name || '';
+      df.odoo_lead_id.value = l.id;
+      for (const k of ['contact_name', 'contact_function', 'contact_phone', 'contact_email', 'address']) if (l[k]) df[k].value = l[k];
+      if (l.name && l.company && !df.project.value) df.project.value = l.name;
+      const r = regionOf(l.zip || l.address); if (r) df.region.value = r;
+    },
+  });
+  df.prospect.addEventListener('input', () => { df.odoo_lead_id.value = ''; });
+  // Adresse : propositions Google
+  suggest(df.address, {
+    chercher: addressSearch,
+    ligne: (p) => `${esc(p.structured_formatting?.main_text ?? p.description)}<small>${esc(p.structured_formatting?.secondary_text ?? '')}</small>`,
+    choisir: (p) => {
+      df.address.value = p.description.replace(/, Belgi(que|ë|um)$/i, '');
+      new google.maps.Geocoder().geocode({ placeId: p.place_id }).then(({ results }) => {
+        const zip = results?.[0]?.address_components?.find((c) => c.types.includes('postal_code'))?.short_name;
+        const r = regionOf(zip); if (r) df.region.value = r;
+        if (results?.[0]?.formatted_address) df.address.value = results[0].formatted_address.replace(/, Belgi(que|ë|um)$/i, '');
+      }).catch(() => {});
+    },
+  });
+  // Société : fiches contact Odoo
+  const of = $('#org-form');
+  suggest(of.name, {
+    chercher: (q) => odooSearch('partners', q),
+    ligne: (p) => `<b>${esc(p.name)}</b><small>${[p.address, `${p.people.length} personne(s) avec e-mail`].filter(Boolean).map(esc).join(' · ')}</small>`,
+    choisir: async (p) => {
+      try {
+        const id = must(await sb.rpc('amb_create_org', { p_name: p.name, p_odoo_partner: p.id }));
+        of.reset(); $('#org-msg').textContent = `${p.name} est ajoutée depuis Odoo.`;
+        await loadOrgs();
+        document.querySelectorAll('#admin select[name="org_id"]').forEach((s) => { s.value = id; });
+        const box = $('#odoo-people');
+        box.hidden = false;
+        box.innerHTML = p.people.length
+          ? `<b>Personnes de ${esc(p.name)} dans Odoo</b><ul>${p.people.map((c, k) => `<li><span>${esc(c.name)} · ${esc(c.email)}${c.function ? ` · ${esc(c.function)}` : ''}</span><button type="button" class="btn secondary" data-k="${k}">Rattacher</button></li>`).join('')}</ul>`
+          : `<b>${esc(p.name)}</b> n'a aucune personne avec une adresse e-mail dans Odoo. Rattachez-les à la main ci-dessous.`;
+        box.onclick = async (e) => {
+          const b = e.target.closest('button[data-k]'); if (!b) return;
+          const c = p.people[Number(b.dataset.k)];
+          try {
+            must(await sb.rpc('amb_upsert_apporteur', { p_email: c.email, p_name: c.name, p_org: id }));
+            b.disabled = true; b.textContent = 'Rattaché';
+            await loadOrgs();
+          } catch (err) { fail(err, 'La personne n\'a pas pu être rattachée.'); }
+        };
+      } catch (err) { fail(err, 'La société n\'a pas pu être créée.'); }
+    },
+  });
+
   $('#org-view').addEventListener('change', (e) => { state.org = e.target.value || null; loadSpace().catch(fail); });
 
   $('#dossier-form').addEventListener('submit', async (e) => {
@@ -223,8 +353,9 @@ function wireAdmin() {
     msg.textContent = '';
     if (!org?.people.length && !confirm(`Aucune personne n'est rattachée à ${org?.name}. Le dossier sera créé, mais aucun e-mail ne partira. Continuer ?`)) return;
     try {
+      if (v.odoo_lead_id) v.odoo_lead_id = Number(v.odoo_lead_id);
       must(await sb.from('amb_dossiers').insert(v));
-      f.reset(); f.org_id.value = v.org_id;
+      f.reset(); f.org_id.value = v.org_id; f.odoo_lead_id.value = '';
       msg.textContent = org.people.length ? `Dossier affecté. E-mail envoyé à ${org.people.map((p) => p.email).join(', ')}.` : 'Dossier créé, sans e-mail.';
       await loadSpace();
     } catch (err) { fail(err, 'Le dossier n\'a pas pu être créé.'); }
@@ -244,7 +375,7 @@ function wireAdmin() {
   $('#org-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      must(await sb.rpc('amb_create_org', { p_name: values(e.target).name }));
+      must(await sb.rpc('amb_create_org', { p_name: values(e.target).name, p_odoo_partner: null }));
       e.target.reset(); $('#org-msg').textContent = 'Société créée.';
       await loadOrgs();
     } catch (err) { fail(err, 'La société n\'a pas pu être créée.'); }

@@ -81,6 +81,19 @@
     .form .btn { width: auto; justify-self: start; }
     .people { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
     .people li.pending { color: var(--muted); }
+    /* Listes de propositions (Odoo, adresses Google) */
+    .form label { position: relative; }
+    .sugg { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin: 4px 0 0; padding: 4px; list-style: none; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.12); max-height: 280px; overflow-y: auto; }
+    .sugg li { padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    .sugg li:hover, .sugg li[aria-selected="true"] { background: var(--accent-soft); }
+    .sugg li small { display: block; color: var(--muted); }
+    .sugg li.info { cursor: default; color: var(--muted); }
+    .sugg li.info:hover { background: none; }
+    .odoo-people { margin: 10px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--accent-soft); font-size: 14px; }
+    .odoo-people ul { margin: 6px 0 0; padding: 0; list-style: none; }
+    .odoo-people li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 4px 0; flex-wrap: wrap; }
+    .odoo-people .btn { padding: 5px 12px; font-size: 13px; }
     .ok-msg { color: #1E7F4E; font-size: 14px; min-height: 1.2em; }
     @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .form { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 560px) { .form { grid-template-columns: 1fr; } .form .wide { grid-column: auto; } .dossier .kv { grid-template-columns: 1fr; } }
@@ -165,9 +178,10 @@
       <h3>Affecter un dossier à une société</h3>
       <form class="form" id="dossier-form">
         <label>Société <select name="org_id" required></select></label>
-        <label class="wide">Prospect <input name="prospect" required placeholder="Nom du prospect ou du site"></label>
+        <label class="wide">Prospect <input name="prospect" required autocomplete="off" placeholder="Tapez un nom : les fiches du CRM Odoo sont proposées"></label>
+        <input type="hidden" name="odoo_lead_id">
         <label>Région <select name="region"><option>Bruxelles</option><option>Wallonie</option><option>Flandre</option></select></label>
-        <label class="wide">Adresse <input name="address" placeholder="Rue, numéro, code postal, commune"></label>
+        <label class="wide">Adresse <input name="address" autocomplete="off" placeholder="Commencez à taper : Google propose les adresses"></label>
         <label class="wide">Projet <input name="project" placeholder="Ex. toiture de 800 m², visite pour une installation PV"></label>
         <label>Contact <input name="contact_name" placeholder="Prénom Nom"></label>
         <label>Fonction <input name="contact_function"></label>
@@ -193,9 +207,10 @@
 
       <h3>Sociétés et personnes</h3>
       <form class="form" id="org-form">
-        <label class="wide">Nouvelle société <input name="name" required placeholder="Nom de la société"></label>
-        <button class="btn secondary" type="submit">Créer la société</button>
+        <label class="wide">Société <input name="name" required autocomplete="off" placeholder="Tapez un nom : les fiches contact Odoo sont proposées"></label>
+        <button class="btn secondary" type="submit">Créer sans fiche Odoo</button>
       </form>
+      <div class="odoo-people" id="odoo-people" hidden></div>
       <form class="form" id="person-form" style="margin-top:10px">
         <label>Société <select name="org_id" required></select></label>
         <label>Nom de la personne <input name="name" required></label>
