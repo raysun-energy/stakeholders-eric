@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RaYSun · Espace apporteurs d'affaires</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { display: block; }
+    .wrap { padding: 20px 16px 80px; max-width: 1180px; margin: 0 auto; }
+    h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; margin: 34px 0 12px; }
+    .lead-in { color: var(--muted); margin: 0 0 14px; max-width: 70ch; }
+    .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+    .bar select { width: auto; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--surface); }
+    .seg button { border: 0; background: none; font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--text); }
+    .seg button[aria-pressed="true"] { background: var(--pill); color: #fff; font-weight: 600; }
+
+    /* Bandeau : part de la société parmi tous les apporteurs */
+    .hero { background: #141414; color: #F5F1EA; border-radius: 26px; padding: 28px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: end; }
+    .hero .eyebrow { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; border: 1px solid #4a4a46; border-radius: 999px; padding: 3px 10px; }
+    .hero .big { font-size: clamp(44px, 8vw, 72px); font-weight: 800; letter-spacing: -.03em; line-height: 1; margin: 14px 0 6px;
+      background: linear-gradient(135deg, var(--sun1), var(--sun2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p { margin: 0; color: #BDB8AE; }
+    .hero .facts { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 16px; }
+    .hero .facts b { display: block; font-size: 22px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+    .hero .facts span { font-size: 12px; color: #BDB8AE; }
+    .meter { height: 10px; border-radius: 999px; background: #33322e; overflow: hidden; margin-top: 14px; }
+    .meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--sun1), var(--sun2)); }
+
+    /* Podium */
+    .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end; min-height: 190px; }
+    .podium .step { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
+    .podium .who { font-weight: 700; font-size: 14px; color: #fff; overflow-wrap: anywhere; }
+    .podium .share { font-size: 13px; color: #BDB8AE; font-variant-numeric: tabular-nums; }
+    .podium .block { width: 100%; border-radius: 14px 14px 6px 6px; background: #2b2a26; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: #F5F1EA; }
+    .podium .p1 .block { height: 110px; background: linear-gradient(135deg, var(--sun1), var(--sun2)); color: #141414; }
+    .podium .p2 .block { height: 78px; }
+    .podium .p3 .block { height: 54px; }
+    .podium .me .who::after { content: " (vous)"; font-weight: 500; color: var(--sun1); }
+    .podium .empty .block { opacity: .35; }
+
+    /* Dossiers */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+    .dossier { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+    .dossier h3 { margin: 0; font-size: 17px; font-weight: 800; }
+    .dossier .meta { color: var(--muted); font-size: 13px; }
+    .dossier dl { margin: 0; }
+    .dossier .kv { grid-template-columns: 110px 1fr; font-size: 14px; }
+    .dossier .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+    .dossier .btn.primary { width: auto; }
+    .dossier textarea { font-size: 14px; }
+    .dossier a, td a { color: var(--accent); }
+    .st { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 3px 10px; }
+    .st-Proposé { background: #FCF0D9; color: #8A5206; }
+    .st-Confirmé { background: #E3F2E9; color: #1E7F4E; }
+    .st-Refusé { background: #FBE4E0; color: #B83A2C; }
+    .st-Visite { background: #E3EDF7; color: #2E5E8C; }
+    .st-Clôturé { background: var(--border); color: var(--muted); }
+
+    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    th { background: var(--bg); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tr.total td { font-weight: 700; background: var(--bg); }
+    td small { color: var(--muted); display: block; }
+
+    /* Outils de l'équipe */
+    .admin { border: 1px dashed var(--border); border-radius: 22px; padding: 4px 18px 18px; margin-top: 40px; background: var(--surface); }
+    .admin > h2 { margin-top: 18px; }
+    .admin h3 { font-size: 16px; margin: 26px 0 10px; }
+    .form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
+    .form label { font-size: 13px; display: block; }
+    .form label > input, .form label > select, .form label > textarea { margin-top: 4px; }
+    .form .wide { grid-column: span 2; }
+    .form .full { grid-column: 1 / -1; }
+    .form .btn { width: auto; justify-self: start; }
+    .people { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+    .people li.pending { color: var(--muted); }
+    .ok-msg { color: #1E7F4E; font-size: 14px; min-height: 1.2em; }
+    @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .form { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .form { grid-template-columns: 1fr; } .form .wide { grid-column: auto; } .dossier .kv { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="login" class="overlay" hidden>
+    <form id="login-form" class="card">
+      <h1>RaYSun <span>Apporteurs d'affaires</span></h1>
+      <p class="muted">Vos dossiers, votre facturation et votre classement.</p>
+      <label>Votre email <input name="email" type="email" required autocomplete="email"></label>
+      <label>Mot de passe <input name="password" type="password" autocomplete="current-password"></label>
+      <p class="error" id="login-error"></p>
+      <p class="success" id="login-info" hidden></p>
+      <button type="submit" class="btn primary">Se connecter</button>
+      <button type="button" id="magic-link" class="link" style="margin-top:12px">Première visite ou pas de mot de passe ? Recevoir un lien de connexion par email</button>
+    </form>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">RaYSun <span>Apporteurs d'affaires</span></div>
+    <div class="user">
+      <span id="user-name"></span>
+      <a id="tools-link" href="https://meek-florentine-28add5.netlify.app/" hidden>Tous les outils</a>
+      <a id="admin-link" href="admin.html" hidden>Suivi équipe</a>
+      <a href="./">Carte</a>
+      <button class="link" onclick="signOut()">Se déconnecter</button>
+    </div>
+  </header>
+
+  <div class="wrap" id="content" hidden>
+    <p class="error" id="error"></p>
+
+    <div class="bar" id="org-bar" hidden>
+      <label for="org-view" class="muted">Société affichée</label>
+      <select id="org-view"></select>
+    </div>
+
+    <div id="no-org" class="notice" hidden>Votre compte n'est rattaché à aucune société d'apporteurs d'affaires. Écrivez à eric.rw@raysun.solar pour être rattaché.</div>
+
+    <div id="space" hidden>
+      <div class="bar">
+        <div class="seg" role="group" aria-label="Période">
+          <button type="button" data-kind="trimestre" aria-pressed="true">Par trimestre</button>
+          <button type="button" data-kind="année" aria-pressed="false">Par année</button>
+        </div>
+        <select id="period" aria-label="Période affichée"></select>
+      </div>
+
+      <section class="hero" aria-live="polite">
+        <div id="hero-main"></div>
+        <div>
+          <div class="podium" id="podium"></div>
+        </div>
+      </section>
+
+      <div id="ranking-block" hidden>
+        <h2>Classement complet de la période</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Rang</th><th>Société</th><th class="num">Facturé (HTVA)</th><th class="num">Part</th></tr></thead>
+          <tbody id="ranking"></tbody>
+        </table></div>
+      </div>
+
+      <h2 id="dossiers-title">Vos dossiers</h2>
+      <p class="lead-in" id="dossiers-intro">Les dossiers que RaYSun vous confie. Confirmez chaque dossier pour nous dire que vous le prenez en charge.</p>
+      <div class="cards" id="dossiers"></div>
+
+      <h2>Facturation</h2>
+      <p class="lead-in">Montants hors TVA facturés à RaYSun, d'après les factures enregistrées par l'équipe.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Référence</th><th>Objet</th><th class="num">Montant HTVA</th><th id="inv-actions"></th></tr></thead>
+        <tbody id="invoices"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Outils de l'équipe -->
+    <section class="admin" id="admin" hidden>
+      <h2>Gestion par l'équipe</h2>
+      <p class="lead-in">Visible uniquement par l'équipe RaYSun.</p>
+
+      <h3>Affecter un dossier à une société</h3>
+      <form class="form" id="dossier-form">
+        <label>Société <select name="org_id" required></select></label>
+        <label class="wide">Prospect <input name="prospect" required placeholder="Nom du prospect ou du site"></label>
+        <label>Région <select name="region"><option>Bruxelles</option><option>Wallonie</option><option>Flandre</option></select></label>
+        <label class="wide">Adresse <input name="address" placeholder="Rue, numéro, code postal, commune"></label>
+        <label class="wide">Projet <input name="project" placeholder="Ex. toiture de 800 m², visite pour une installation PV"></label>
+        <label>Contact <input name="contact_name" placeholder="Prénom Nom"></label>
+        <label>Fonction <input name="contact_function"></label>
+        <label>Téléphone <input name="contact_phone" type="tel"></label>
+        <label>E-mail <input name="contact_email" type="email"></label>
+        <label>Disponible le <input name="available_on" type="date"></label>
+        <label class="wide">Précision sur la disponibilité <input name="available_note" placeholder="Ex. le matin, prévenir la veille"></label>
+        <button class="btn primary full" type="submit">Affecter et envoyer l'e-mail</button>
+        <p class="ok-msg full" id="dossier-msg"></p>
+      </form>
+
+      <h3>Enregistrer une facture d'apporteur</h3>
+      <form class="form" id="invoice-form">
+        <label>Société <select name="org_id" required></select></label>
+        <label>Date de facture <input name="invoice_date" type="date" required></label>
+        <label>Montant HTVA (€) <input name="amount_eur" type="number" min="0" step="0.01" required></label>
+        <label>Référence <input name="reference" placeholder="N° de facture"></label>
+        <label class="wide">Objet <input name="label" placeholder="Ex. commissions du 3e trimestre 2026"></label>
+        <button class="btn primary" type="submit">Enregistrer</button>
+        <p class="ok-msg full" id="invoice-msg"></p>
+      </form>
+
+      <h3>Sociétés et personnes</h3>
+      <form class="form" id="org-form">
+        <label class="wide">Nouvelle société <input name="name" required placeholder="Nom de la société"></label>
+        <button class="btn secondary" type="submit">Créer la société</button>
+      </form>
+      <form class="form" id="person-form" style="margin-top:10px">
+        <label>Société <select name="org_id" required></select></label>
+        <label>Nom de la personne <input name="name" required></label>
+        <label>E-mail <input name="email" type="email" required></label>
+        <button class="btn secondary" type="submit">Rattacher la personne</button>
+        <p class="ok-msg full" id="org-msg"></p>
+      </form>
+      <p class="muted small">Une personne rattachée reçoit les e-mails des dossiers de sa société et se connecte avec le lien envoyé par e-mail à sa première visite. Pour lui donner un mot de passe, utilisez « Qui a accès » dans le suivi équipe.</p>
+      <div class="table-wrap" style="margin-top:10px"><table>
+        <thead><tr><th>Société</th><th>Personnes</th></tr></thead>
+        <tbody id="orgs"></tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <script src="vendor/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="dossiers.js"></script>
+</body>
+</html>

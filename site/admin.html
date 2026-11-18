@@ -54,7 +54,7 @@
 
   <header class="topbar">
     <div class="brand">CityWatt <span>Suivi équipe</span></div>
-    <div class="user"><a href="https://meek-florentine-28add5.netlify.app/">Tous les outils</a><a href="./">Carte</a><button class="link" onclick="signOut()">Se déconnecter</button></div>
+    <div class="user"><a href="https://meek-florentine-28add5.netlify.app/">Tous les outils</a><a href="dossiers.html">Dossiers apporteurs</a><a href="./">Carte</a><button class="link" onclick="signOut()">Se déconnecter</button></div>
   </header>
 
   <div class="wrap" id="content" hidden>
@@ -250,7 +250,7 @@
       document.getElementById('members').innerHTML = data.map((m, i) => `
         <tr><td>${esc(m.name)}</td><td>${esc(m.email)}</td>
           <td><input class="org" data-org="${i}" value="${esc(m.organisation)}" placeholder="—"></td>
-          <td>${esc(ROLES[m.role])}</td>
+          <td>${esc(ROLES[m.role] ?? 'Apporteur d’affaires')}</td>
           <td>${m.pending ? 'Invité, pas encore connecté' : 'Actif'}</td>
           <td style="white-space:nowrap">
             <button class="link" data-reset="${i}" title="Créer un nouveau mot de passe à lui transmettre">Nouveau mot de passe</button>

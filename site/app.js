@@ -749,6 +749,7 @@ async function start() {
   $('#login').hidden = true;
   $('#user-name').textContent = state.user.name;
   $('#admin-link').hidden = state.user.role !== 'admin';
+  $('#dossiers-link').hidden = !['admin', 'apporteur'].includes(state.user.role);
   $('#converted-filter').hidden = state.user.role !== 'admin';
   $('#add-lead').hidden = state.user.role !== 'admin';
   $('#tracker-link').hidden = state.user.role !== 'admin';

@@ -11,6 +11,16 @@ L'équipe, sur `admin.html` : valide les demandes d'accès, suit les contacts et
 
 **Architecture** : site statique sur **Netlify** (`site/`) + base de données et comptes dans **Supabase** (projet « Suivi-vendeurs »). Pas de serveur à maintenir. Les tables du module sont préfixées `amb_` et ne touchent pas aux tables existantes de l'app.
 
+## Apporteurs d'affaires (`dossiers.html`)
+
+Un apporteur d'affaires est une **société** (un installateur, par exemple) à laquelle plusieurs personnes sont rattachées (rôle `apporteur`).
+
+- **Dossiers** : l'équipe affecte un dossier à une société (prospect, adresse, projet, contact, date de disponibilité). Toutes les personnes de la société reçoivent un e-mail, puis confirment sur la page qu'elles prennent le dossier ; l'équipe est prévenue de chaque réponse.
+- **Facturation** : l'équipe enregistre les factures de chaque société (montants hors TVA). Chaque société voit les siennes, avec les totaux par trimestre et par année.
+- **Classement** : part de la société dans le total facturé par tous les apporteurs, et podium par trimestre ou par année. Une société voit le nom et la part des trois premières, jamais leurs montants.
+- Tables `amb_orgs`, `amb_dossiers`, `amb_org_invoices` (script `supabase/010_apporteurs_dossiers_facturation.sql`), e-mails par la fonction `amb-dossier-notify` (envoi par Odoo, mêmes secrets que `amb-notify`).
+- La plateforme couvre les trois Régions : Bruxelles, Wallonie et Flandre.
+
 ## Mise en place
 
 Déjà fait dans le projet Supabase **Suivi-vendeurs** : tables `amb_*`, règles d'accès, 16 immeubles, invitation de eric.rw@raysun.solar en rôle équipe. `site/config.js` est rempli. Le projet Netlify **citywatt-ambassadeurs** existe (https://citywatt-ambassadeurs.netlify.app).
