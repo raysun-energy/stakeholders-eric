@@ -17,7 +17,7 @@ Un apporteur d'affaires est une **société** (un installateur, par exemple) à 
 
 - **Dossiers** : l'équipe affecte un dossier à une société (prospect, adresse, projet, contact, date de disponibilité). Toutes les personnes de la société reçoivent un e-mail, puis confirment sur la page qu'elles prennent le dossier ; l'équipe est prévenue de chaque réponse.
 - **Facturation** : l'équipe enregistre les factures de chaque société (montants hors TVA). Chaque société voit les siennes, avec les totaux par trimestre et par année.
-- **Classement** : part de la société dans le total facturé par tous les apporteurs, et podium par trimestre ou par année. Une société voit le nom et la part des trois premières, jamais leurs montants.
+- **Classement** : part de la société dans le total facturé par tous les apporteurs, et podium par trimestre ou par année. Une société voit la part des trois premières, jamais le nom ni les montants des autres.
 - Tables `amb_orgs`, `amb_dossiers`, `amb_org_invoices` (script `supabase/010_apporteurs_dossiers_facturation.sql`), e-mails par la fonction `amb-dossier-notify` (envoi par Odoo, mêmes secrets que `amb-notify`).
 - La plateforme couvre les trois Régions : Bruxelles, Wallonie et Flandre.
 

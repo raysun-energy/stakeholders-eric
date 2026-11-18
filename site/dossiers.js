@@ -77,7 +77,7 @@ function renderHero() {
     const here = at(r);
     if (!here.length) return `<div class="step p${r} empty"><div class="block">${r}</div></div>`;
     return `<div class="step p${r}${!state.admin && here.some((p) => p.me) ? ' me' : ''}">
-      ${here.map((p) => `<div><div class="who"${p.me ? ' data-me' : ''}>${esc(p.name)}</div><div class="share">${esc(pct(p.share))}</div></div>`).join('')}
+      ${here.map((p) => `<div><div class="who">${p.name ? esc(p.name) : 'Autre apporteur'}</div><div class="share">${esc(pct(p.share))}</div></div>`).join('')}
       <div class="block" aria-hidden="true">${r}</div></div>`;
   };
   podium.innerHTML = step(2) + step(1) + step(3);

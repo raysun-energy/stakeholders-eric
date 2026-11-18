@@ -238,7 +238,7 @@ create policy "équipe supprime les factures" on public.amb_org_invoices
   for delete using (public.amb_role() = 'admin');
 
 -- Classement par période (trimestre et année) : part de chaque société dans le total facturé par tous les apporteurs.
--- Une société voit son montant et sa part, et le nom et la part des trois premières ; jamais le montant des autres.
+-- Une société voit son montant et sa part, et la part des trois premières ; jamais le nom ni le montant des autres.
 -- L'équipe (p_org renseigné ou non) voit tous les montants.
 create or replace function public.amb_apporteur_stats(p_org uuid default null)
 returns table (period text, kind text, own_amount numeric, own_share numeric, own_rank int, orgs int, total_amount numeric, podium jsonb)
@@ -269,10 +269,10 @@ language sql stable security definer set search_path = public as $$
     max(c.n)::int,
     case when me.is_admin then max(c.total) end,
     jsonb_agg(jsonb_build_object(
-      'rank', c.rang, 'name', o.name, 'me', c.org_id = me.org,
+      'rank', c.rang, 'name', case when me.is_admin or c.org_id = me.org then o.name end, 'me', c.org_id = me.org,
       'share', case when c.total > 0 then round(100 * c.amount / c.total, 1) else 0 end,
       'amount', case when me.is_admin or c.org_id = me.org then c.amount end
-    ) order by c.rang, o.name) filter (where c.rang <= 3 or me.is_admin)
+    ) order by c.rang, c.amount desc, o.id) filter (where c.rang <= 3 or me.is_admin)
   from classe c join public.amb_orgs o on o.id = c.org_id cross join me
   where public.amb_role() is not null and (me.is_admin or me.org is not null)
   group by c.period, c.kind, me.org, me.is_admin
