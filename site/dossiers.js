@@ -204,7 +204,7 @@ async function loadOrgs() {
   view.value = state.orgs.some((o) => o.id === cur) ? cur : '';
   state.org = view.value || null;
   $('#orgs').innerHTML = state.orgs.length ? state.orgs.map((o) => `<tr><td><b>${esc(o.name)}</b></td><td>${
-    o.people.length ? `<ul class="people">${o.people.map((p) => `<li class="${p.pending ? 'pending' : ''}">${esc(p.name)} · ${esc(p.email)}${p.pending ? ' · invitation en attente' : ''}</li>`).join('')}</ul>`
+    o.people.length ? `<ul class="people">${o.people.map((p) => `<li class="${p.pending ? 'pending' : ''}">${esc(p.name)} · ${esc(p.email)}${p.pending ? ' · invitation en attente' : ''} <button type="button" class="link danger" data-remove="${esc(p.email)}">Retirer</button></li>`).join('')}</ul>`
       : '<span class="muted">Personne pour le moment : les e-mails de dossier ne partiront pas.</span>'}</td></tr>`).join('')
     : '<tr><td colspan="2" class="muted">Aucune société. Créez-en une ci-dessus.</td></tr>';
 }
@@ -297,6 +297,13 @@ async function addressSearch(q) {
 }
 
 function wireAdmin() {
+  // Retirer l'accès d'une personne (compte ou invitation en attente).
+  $('#orgs').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-remove]'); if (!b) return;
+    if (!confirm(`Retirer l'accès de ${b.dataset.remove} ? Cette personne ne recevra plus les e-mails de dossier.`)) return;
+    try { must(await sb.rpc('amb_remove_member', { p_email: b.dataset.remove })); await loadOrgs(); }
+    catch (err) { fail(err, 'Le retrait a échoué.'); }
+  });
   // Prospect : fiches du CRM Odoo
   const df = $('#dossier-form');
   suggest(df.prospect, {
