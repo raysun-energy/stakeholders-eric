@@ -41,19 +41,9 @@
         <p>Cliquez sur un immeuble sur la carte ou dans la liste. Si le nom, l’adresse ou une société vous parle, dites-le nous. Vous connaissez un autre lieu à prospecter ? Utilisez le bouton « + ».</p>
         <input id="search" type="search" placeholder="Rechercher un immeuble, une société, une commune…">
         <div class="filters">
-          <label><input type="checkbox" data-wave="1" checked> Vague 1</label>
-          <label><input type="checkbox" data-wave="2" checked> Vague 2</label>
-          <label title="Producteurs photovoltaïques détectés (batch septembre 2026)"><input type="checkbox" data-wave="3" checked> Vague 3 · PV</label>
-        </div>
-        <div class="filters" title="A = à approcher en premier, B = ensuite, C = plus tard">
-          <span class="muted">Priorité</span>
-          <label><input type="checkbox" data-prio="A" checked> <i class="dot prio-A"></i>A</label>
-          <label><input type="checkbox" data-prio="B" checked> <i class="dot prio-B"></i>B</label>
-          <label><input type="checkbox" data-prio="C" checked> <i class="dot prio-C"></i>C</label>
-        </div>
-        <div class="filters">
-          <label><input type="checkbox" id="show-members" autocomplete="off"> <i class="dot member"></i><span>Membres CityWatt (<span id="members-count">0</span>)</span></label>
+          <label><input type="checkbox" id="show-members" autocomplete="off"> <i class="dot member"></i><span>Membres des communautés (<span id="members-count">0</span>)</span></label>
           <label><input type="checkbox" id="show-suggestions" autocomplete="off"> <i class="dot sugg"></i><span>Lieux proposés</span></label>
+          <label id="dossiers-filter" hidden><input type="checkbox" id="show-dossiers" autocomplete="off" checked> <i class="dot dossier"></i><span>Dossiers apporteurs (<span id="dossiers-count">0</span>)</span></label>
           <label id="converted-filter" hidden><input type="checkbox" id="show-converted" autocomplete="off"> <span>Afficher les points convertis / traités</span></label>
         </div>
         <!-- Critères de ciblage : texte modifiable par l'équipe dans le suivi équipe (table amb_settings). -->
@@ -227,14 +217,8 @@
     <form class="contrib-form lead-form">
       <h3 class="form-title">Ajouter un immeuble</h3>
       <label>Nom de l’immeuble / du site * <input name="name" required placeholder="Ex. Hôpital Delta — CHIREC"></label>
-      <div class="row">
-        <label>Vague *
-          <select name="wave" required><option value="1">Vague 1</option><option value="2" selected>Vague 2</option><option value="3">Vague 3 (producteurs PV)</option></select>
-        </label>
-        <label>Priorité *
-          <select name="priority" required><option>A</option><option selected>B</option><option>C</option></select>
-        </label>
-      </div>
+      <!-- Vague et priorité ne sont plus affichées ; valeurs neutres gardées pour la base. -->
+      <input type="hidden" name="wave" value="1"><input type="hidden" name="priority" value="B">
       <label>Adresse <input name="address" placeholder="Rue et numéro"></label>
       <label>Commune <input name="municipality" placeholder="1160 Auderghem"></label>
       <button type="button" class="btn secondary locate">Localiser sur la carte</button>

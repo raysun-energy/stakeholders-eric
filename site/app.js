@@ -3,6 +3,7 @@ const state = {
   leads: [], markers: new Map(), selectedId: null, mine: [],
   suggestions: [], suggMarkers: new Map(),
   members: [], memberMarkers: [],
+  dossiers: [], dossierMarkers: [],
   draft: null, // lieu en cours de proposition : { lat, lng, marker }
 };
 
@@ -23,7 +24,7 @@ function fmt(n) {
 // --- Marqueurs ------------------------------------------------------------------
 
 function leadHtml(lead, selected) {
-  return `<div class="pin prio-${esc(lead.priority)}${selected ? ' selected' : ''}${lead.convertedAt ? ' converted' : ''}">${esc(lead.wave)}</div>`
+  return `<div class="pin lead${selected ? ' selected' : ''}${lead.convertedAt ? ' converted' : ''}"></div>`
     + `<span class="mk-label ${labelSide(lead)}">${esc(shortName(lead))}</span>`;
 }
 
@@ -57,8 +58,14 @@ function renderMarkers() {
     }));
   }
   state.suggestions.forEach(addSuggestionMarker);
+  // Dossiers confiés aux apporteurs d'affaires (toutes Régions) : un clic ouvre l'espace apporteurs.
+  state.dossierMarkers = state.dossiers.map((d) => map.addMarker({
+    lat: d.lat, lng: d.lng, zIndex: 15, title: `Dossier : ${d.prospect}`,
+    html: `<div class="pin dossier">D</div><span class="mk-label right">${esc(d.prospect)}</span>`,
+    onClick: () => { location.href = 'dossiers.html'; },
+  }));
   applyFilters();
-  const pts = state.leads.filter((l) => l.lat != null).map((l) => [l.lat, l.lng]);
+  const pts = [...state.leads, ...state.dossiers].filter((l) => l.lat != null).map((l) => [l.lat, l.lng]);
   if (pts.length) map.fitBounds(pts);
 }
 
@@ -81,8 +88,7 @@ function updateLabels() {
 // Points convertis : retirés de la carte. Seule l'équipe peut les réafficher.
 const showConverted = () => state.user.role === 'admin' && $('#show-converted').checked;
 
-function matches(lead, q, waves, prios) {
-  if (!waves.has(lead.wave) || !prios.has(lead.priority)) return false;
+function matches(lead, q) {
   if (lead.convertedAt && !showConverted()) return false;
   if (!q) return true;
   const hay = [lead.name, lead.address, lead.municipality, lead.companies, lead.owner].join(' ').toLowerCase();
@@ -91,20 +97,19 @@ function matches(lead, q, waves, prios) {
 
 function applyFilters() {
   const q = $('#search').value.trim().toLowerCase();
-  const waves = new Set([...document.querySelectorAll('[data-wave]')].filter((i) => i.checked).map((i) => Number(i.dataset.wave)));
-  const prios = new Set([...document.querySelectorAll('[data-prio]')].filter((i) => i.checked).map((i) => i.dataset.prio));
   const showMembers = $('#show-members').checked;
   const showSugg = $('#show-suggestions').checked;
-  const order = { A: 0, B: 1, C: 2 };
   const visible = state.leads
-    .filter((l) => matches(l, q, waves, prios))
-    .sort((a, b) => a.wave - b.wave || order[a.priority] - order[b.priority]);
+    .filter((l) => matches(l, q))
+    .sort((a, b) => shortName(a).localeCompare(shortName(b), 'fr'));
 
   for (const lead of state.leads) {
     const m = state.markers.get(lead.id);
     if (m) (visible.includes(lead) ? m.show() : m.hide());
   }
   state.memberMarkers.forEach((m) => (showMembers ? m.show() : m.hide()));
+  const showDossiers = $('#show-dossiers').checked;
+  state.dossierMarkers.forEach((m) => (showDossiers ? m.show() : m.hide()));
   const visibleSugg = state.suggestions.filter((s) => showSugg
     && (!isClosed(s) || showConverted())
     && (!q || s.place_name.toLowerCase().includes(q)));
@@ -120,10 +125,10 @@ function applyFilters() {
     li.className = lead.id === state.selectedId ? 'active' : '';
     const mine = state.mine.some((c) => c.lead_id === lead.id);
     li.innerHTML = `
-      <i class="dot prio-${esc(lead.priority)}"></i>
+      <i class="dot lead"></i>
       <div>
         <strong>${esc(shortName(lead))}</strong>
-        <small>${lead.convertedAt ? 'Converti · ' : ''}${esc(lead.municipality)} · Vague ${lead.wave} · Prio ${esc(lead.priority)}</small>
+        <small>${lead.convertedAt ? 'Converti · ' : ''}${esc(lead.municipality)}</small>
       </div>
       ${mine ? '<span class="badge mine" title="Vous avez déjà proposé un contact">✓</span>'
         : lead.contributionCount ? `<span class="badge" title="Contacts déjà proposés">${lead.contributionCount}</span>` : ''}`;
@@ -136,7 +141,7 @@ function applyFilters() {
       const li = document.createElement('li');
       li.className = s.id === state.selectedId ? 'active' : '';
       li.innerHTML = `<i class="dot sugg"></i><div><strong>${esc(s.place_name)}</strong>
-        <small>${s.priority ? `Prio ${esc(s.priority)} · ` : ''}${esc(s.follow_up)}${state.user.role === 'admin' ? ` · par ${esc(s.author_name)}` : ''}</small></div>`;
+        <small>${esc(s.follow_up)}${state.user.role === 'admin' ? ` · par ${esc(s.author_name)}` : ''}</small></div>`;
       li.addEventListener('click', () => selectSuggestion(s.id));
       list.appendChild(li);
     }
@@ -178,7 +183,6 @@ function selectSuggestion(id) {
   $('#panel-body').innerHTML = `
     <div class="panel-head">
       <span class="tag sugg">Lieu proposé</span>
-      ${s.priority ? `<span class="tag prio-${esc(s.priority)}">Prio ${esc(s.priority)}</span>` : ''}
       <span class="tag">${esc(s.follow_up)}</span>
       <h2>${esc(s.place_name)}</h2>
       ${s.address ? `<p class="muted">${esc(s.address)}</p>` : ''}
@@ -250,8 +254,6 @@ function renderPanel(lead) {
   const mine = state.mine.filter((c) => c.lead_id === lead.id);
   $('#panel-body').innerHTML = `
     <div class="panel-head">
-      <span class="tag prio-${esc(lead.priority)}">Prio ${esc(lead.priority)}</span>
-      <span class="tag">Vague ${lead.wave}</span>
       <h2>${esc(lead.name)}</h2>
       <p class="muted">${esc(lead.address)}, ${esc(lead.municipality)}</p>
     </div>
@@ -436,7 +438,7 @@ $('#panel-close').addEventListener('click', () => {
 
 function draftHtml(kind) {
   return kind === 'lead'
-    ? '<div class="pin prio-A selected">?</div><span class="mk-label right">Emplacement de l’immeuble</span>'
+    ? '<div class="pin lead selected"></div><span class="mk-label right">Emplacement de l’immeuble</span>'
     : '<div class="pin sugg selected">+</div><span class="mk-label right">Nouveau lieu</span>';
 }
 
@@ -690,6 +692,13 @@ async function loadData() {
   state.mine = mine.data;
   state.suggestions = sugg.data;
   state.members = members.data;
+  // Dossiers des apporteurs : l'équipe les voit tous, une société voit les siens (règles RLS) ; non bloquant.
+  if (['admin', 'apporteur'].includes(state.user.role)) {
+    const { data } = await sb.from('amb_dossiers').select('id, prospect, lat, lng, status').not('lat', 'is', null).neq('status', 'Clôturé');
+    state.dossiers = data ?? [];
+    $('#dossiers-filter').hidden = false;
+    $('#dossiers-count').textContent = state.dossiers.length;
+  }
   $('#members-count').textContent = state.members.length;
 }
 

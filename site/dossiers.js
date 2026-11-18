@@ -305,6 +305,24 @@ function regionOf(zip) {
   return 'Flandre';
 }
 
+// Position d'une adresse (Google Geocoding), pour afficher le dossier sur la carte. Sans réponse : pas de point.
+async function geocodeAddress(address) {
+  if (!address || !(await loadPlaces())) return {};
+  try {
+    const { results } = await new google.maps.Geocoder().geocode({ address, region: 'BE' });
+    const loc = results?.[0]?.geometry?.location;
+    return loc ? { lat: loc.lat(), lng: loc.lng() } : {};
+  } catch { return {}; }
+}
+
+// Dossiers créés avant l'affichage sur la carte : on retrouve leur position une fois.
+async function backfillGeo() {
+  for (const d of state.dossiers.filter((x) => x.address && x.lat == null).slice(0, 20)) {
+    const pos = await geocodeAddress(d.address);
+    if (pos.lat != null) await sb.from('amb_dossiers').update(pos).eq('id', d.id);
+  }
+}
+
 // Adresses proposées par Google (Places). Si le service n'est pas disponible avec la clé, le champ reste une saisie libre.
 let placesReady = null;
 function loadPlaces() {
@@ -406,6 +424,7 @@ function wireAdmin() {
     if (!org?.people.length && !confirm(`Aucune personne n'est rattachée à ${org?.name}. Le dossier sera créé, mais aucun e-mail ne partira. Continuer ?`)) return;
     try {
       if (v.odoo_lead_id) v.odoo_lead_id = Number(v.odoo_lead_id);
+      Object.assign(v, await geocodeAddress(v.address));   // position sur la carte
       must(await sb.from('amb_dossiers').insert(v));
       f.reset(); f.org_id.value = v.org_id; f.odoo_lead_id.value = '';
       msg.textContent = org.people.length ? `Dossier affecté. E-mail envoyé à ${org.people.map((p) => p.email).join(', ')}.` : 'Dossier créé, sans e-mail.';
@@ -423,6 +442,7 @@ function wireAdmin() {
     e.target.disabled = false;
   });
   loadFeesState().catch(console.error);
+  setTimeout(() => backfillGeo().catch(console.error), 1500);
 
   $('#org-form').addEventListener('submit', async (e) => {
     e.preventDefault();

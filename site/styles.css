@@ -67,6 +67,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--sun2); outl
 .prio-A { background: var(--prio-A); }
 .prio-B { background: var(--prio-B); }
 .prio-C { background: var(--prio-C); }
+.dot.lead, .pin.lead { background: #F08A00; }
+.dot.dossier { background: #141414; }
+.pin.lead { width: 18px; height: 18px; left: -9px; top: -9px; }
+.pin.lead.selected { width: 26px; height: 26px; left: -13px; top: -13px; }
+.pin.dossier { background: #141414; border-color: #FFE20C; color: #FFE20C; }
 
 .lead-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
 .lead-list li { display: flex; gap: 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
@@ -136,6 +141,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--sun2); outl
 .tag.prio-A { background: var(--prio-A); }
 .tag.prio-B { background: var(--prio-B); }
 .tag.prio-C { background: var(--prio-C); }
+.dot.lead, .pin.lead { background: #F08A00; }
+.dot.dossier { background: #141414; }
+.pin.lead { width: 18px; height: 18px; left: -9px; top: -9px; }
+.pin.lead.selected { width: 26px; height: 26px; left: -13px; top: -13px; }
+.pin.dossier { background: #141414; border-color: #FFE20C; color: #FFE20C; }
 .tag.sugg { background: var(--sugg); }
 .pitch { background: var(--accent-soft); padding: 12px 14px; border-radius: 14px; }
 dl { margin: 12px 0; }

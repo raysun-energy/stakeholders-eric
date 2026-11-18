@@ -100,7 +100,7 @@
       <label class="show-done"><input type="checkbox" id="show-done-sugg"> Afficher les traités (<span id="done-count-sugg">0</span>)</label></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Date</th><th>Lieu</th><th>Proposé par</th><th>Pourquoi</th><th>Critères</th><th>Contact sur place</th><th>Données énergie</th><th>Priorité</th><th>Suivi</th><th>Notes équipe</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Lieu</th><th>Proposé par</th><th>Pourquoi</th><th>Critères</th><th>Contact sur place</th><th>Données énergie</th><th>Suivi</th><th>Notes équipe</th><th></th></tr></thead>
         <tbody id="suggestions"></tbody>
       </table>
     </div>
@@ -435,9 +435,6 @@
             <small>${esc([s.contact_email, s.contact_phone].filter(Boolean).join(' · '))}</small>
             <small>${esc(s.relation)}</small>` : '<span class="muted">Pas de contact</span>'}</td>
           <td>${energyHtml(s)}</td>
-          <td><select data-sugg="${esc(s.id)}" data-sfield="priority">
-            ${['', 'A', 'B', 'C'].map((o) => `<option value="${o}"${o === (s.priority || '') ? ' selected' : ''}>${o || '—'}</option>`).join('')}
-          </select></td>
           <td><select data-sugg="${esc(s.id)}" data-sfield="follow_up">
             ${SUGG_FOLLOW_UP.map((o) => `<option${o === s.follow_up ? ' selected' : ''}>${esc(o)}</option>`).join('')}
           </select></td>
