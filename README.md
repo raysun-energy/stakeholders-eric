@@ -16,7 +16,8 @@ L'équipe, sur `admin.html` : valide les demandes d'accès, suit les contacts et
 Un apporteur d'affaires est une **société** (un installateur, par exemple) à laquelle plusieurs personnes sont rattachées (rôle `apporteur`).
 
 - **Dossiers** : l'équipe affecte un dossier à une société (prospect, adresse, projet, contact, date de disponibilité). Toutes les personnes de la société reçoivent un e-mail, puis confirment sur la page qu'elles prennent le dossier ; l'équipe est prévenue de chaque réponse.
-- **Facturation** : l'équipe enregistre les factures de chaque société (montants hors TVA). Chaque société voit les siennes, avec les totaux par trimestre et par année.
+- **Montants** : les commissions de chaque société viennent de l'outil Fees de la boîte à outils interne. La fonction `amb-fees-sync` relit son document chaque nuit (2 h 15 UTC) et recalcule les commissions par mois ; secrets `FEES_SUPABASE_URL` et `FEES_SUPABASE_SERVICE_KEY` (script `supabase/012_apporteurs_fees_automatiques.sql`). Chaque société voit les siennes, avec les totaux par trimestre et par année.
+- **Odoo et Google** : la société se choisit parmi les fiches contact Odoo et le prospect parmi les fiches du CRM (fonction `amb-odoo-search`, lecture seule, réservée à l'équipe) ; l'adresse est proposée par Google Places.
 - **Classement** : part de la société dans le total facturé par tous les apporteurs, et podium par trimestre ou par année. Une société voit la part des trois premières, jamais le nom ni les montants des autres.
 - Tables `amb_orgs`, `amb_dossiers`, `amb_org_invoices` (script `supabase/010_apporteurs_dossiers_facturation.sql`), e-mails par la fonction `amb-dossier-notify` (envoi par Odoo, mêmes secrets que `amb-notify`).
 - La plateforme couvre les trois Régions : Bruxelles, Wallonie et Flandre.

@@ -163,9 +163,9 @@
       <div class="cards" id="dossiers"></div>
 
       <h2>Facturation</h2>
-      <p class="lead-in">Montants hors TVA facturés à RaYSun, d'après les factures enregistrées par l'équipe.</p>
+      <p class="lead-in">Commissions hors TVA par mois, calculées par RaYSun à partir des volumes d'énergie partagés.</p>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Référence</th><th>Objet</th><th class="num">Montant HTVA</th><th id="inv-actions"></th></tr></thead>
+        <thead><tr><th>Mois</th><th>Source</th><th>Objet</th><th class="num">Montant HTVA</th><th id="inv-actions"></th></tr></thead>
         <tbody id="invoices"></tbody>
       </table></div>
     </div>
@@ -193,17 +193,9 @@
         <p class="ok-msg full" id="dossier-msg"></p>
       </form>
 
-      <h3>Enregistrer une facture d'apporteur</h3>
-      <p class="muted small">Saisie provisoire, en attendant la reprise automatique des montants depuis l'outil Fees.</p>
-      <form class="form" id="invoice-form">
-        <label>Société <select name="org_id" required></select></label>
-        <label>Date de facture <input name="invoice_date" type="date" required></label>
-        <label>Montant HTVA (€) <input name="amount_eur" type="number" min="0" step="0.01" required></label>
-        <label>Référence <input name="reference" placeholder="N° de facture"></label>
-        <label class="wide">Objet <input name="label" placeholder="Ex. commissions du 3e trimestre 2026"></label>
-        <button class="btn primary" type="submit">Enregistrer</button>
-        <p class="ok-msg full" id="invoice-msg"></p>
-      </form>
+      <h3>Montants facturés : reprise de l'outil Fees</h3>
+      <p class="muted small">Les commissions de chaque apporteur sont relues chaque nuit dans l'outil Fees et recalculées par mois. Rien n'est à saisir ici.</p>
+      <div class="bar"><button class="btn secondary" type="button" id="fees-now">Relire l'outil Fees maintenant</button><span class="muted small" id="fees-state"></span></div>
 
       <h3>Sociétés et personnes</h3>
       <form class="form" id="org-form">

@@ -166,10 +166,11 @@ function renderInvoices() {
     const q = quarterOf(i.invoice_date), y = i.invoice_date.slice(0, 4);
     if (q !== quarter) { flushQ(); if (y !== year) { flushY(); year = y; } quarter = q; }
     qSum += Number(i.amount_eur); ySum += Number(i.amount_eur);
-    rows.push(`<tr data-id="${esc(i.id)}"><td>${esc(dateFr(i.invoice_date))}</td>
+    const mois = i.period_month ? new Date(i.period_month + '-15').toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : dateFr(i.invoice_date);
+    rows.push(`<tr data-id="${esc(i.id)}"><td>${esc(mois)}</td>
       <td>${esc(i.reference)}${state.admin && !state.org ? `<small>${esc(orgName(i.org_id))}</small>` : ''}</td>
       <td>${esc(i.label)}</td><td class="num">${esc(euro(i.amount_eur))}</td>
-      ${state.admin ? '<td><button class="link danger" data-del-invoice>Supprimer</button></td>' : ''}</tr>`);
+      ${state.admin ? `<td>${i.source === 'outil-fees' ? '' : '<button class="link danger" data-del-invoice>Supprimer</button>'}</td>` : ''}</tr>`);
   }
   flushQ(); flushY();
   $('#invoices').innerHTML = rows.join('');
@@ -206,6 +207,14 @@ async function loadOrgs() {
     o.people.length ? `<ul class="people">${o.people.map((p) => `<li class="${p.pending ? 'pending' : ''}">${esc(p.name)} · ${esc(p.email)}${p.pending ? ' · invitation en attente' : ''}</li>`).join('')}</ul>`
       : '<span class="muted">Personne pour le moment : les e-mails de dossier ne partiront pas.</span>'}</td></tr>`).join('')
     : '<tr><td colspan="2" class="muted">Aucune société. Créez-en une ci-dessus.</td></tr>';
+}
+
+async function loadFeesState() {
+  const st = must(await sb.from('amb_fees_sync').select('*').maybeSingle());
+  $('#fees-state').textContent = !st ? 'Aucune lecture pour le moment.'
+    : `${st.ok ? 'Dernière lecture réussie' : 'Dernière lecture en échec'} le ${new Date(st.at).toLocaleString('fr-BE', { dateStyle: 'long', timeStyle: 'short' })} : ${st.message ?? ''}`
+      + (st.ok && st.source_at ? ` (outil Fees modifié le ${dateFr(st.source_at)})` : '');
+  $('#fees-state').style.color = st && !st.ok ? '#B83A2C' : '';
 }
 
 function values(form) {
@@ -361,16 +370,16 @@ function wireAdmin() {
     } catch (err) { fail(err, 'Le dossier n\'a pas pu être créé.'); }
   });
 
-  $('#invoice-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = e.target, v = values(f);
+  $('#fees-now').addEventListener('click', async (e) => {
+    e.target.disabled = true; $('#fees-state').textContent = 'Lecture en cours…';
     try {
-      must(await sb.from('amb_org_invoices').insert(v));
-      f.reset(); f.org_id.value = v.org_id;
-      $('#invoice-msg').textContent = 'Facture enregistrée.';
-      await loadSpace();
-    } catch (err) { fail(err, 'La facture n\'a pas pu être enregistrée.'); }
+      must(await sb.rpc('amb_fees_sync_now'));
+      await new Promise((r) => setTimeout(r, 6000));
+      await Promise.all([loadFeesState(), loadOrgs()]); await loadSpace();
+    } catch (err) { fail(err, 'La lecture n\'a pas pu être lancée.'); }
+    e.target.disabled = false;
   });
+  loadFeesState().catch(console.error);
 
   $('#org-form').addEventListener('submit', async (e) => {
     e.preventDefault();
