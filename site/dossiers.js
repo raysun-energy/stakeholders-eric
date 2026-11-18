@@ -128,6 +128,7 @@ function renderDossiers() {
         ${kv('E-mail', d.contact_email ? `<a href="mailto:${esc(d.contact_email)}">${esc(d.contact_email)}</a>` : '')}
         ${kv('Disponibilité', dispo)}
       </dl>
+      ${d.message ? `<p class="msg"><b>Message de RaYSun</b>${esc(d.message)}</p>` : ''}
       ${answered}${actions}${admin}
     </article>`;
   }).join('');

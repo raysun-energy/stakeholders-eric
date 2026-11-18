@@ -52,6 +52,8 @@
     .dossier .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
     .dossier .btn.primary { width: auto; }
     .dossier textarea { font-size: 14px; }
+    .dossier .msg { background: var(--accent-soft); border-radius: 14px; padding: 10px 12px; font-size: 14px; white-space: pre-line; margin: 0; }
+    .dossier .msg b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
     .dossier a, td a { color: var(--accent); }
     .st { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 3px 10px; }
     .st-Proposé { background: #FCF0D9; color: #8A5206; }
@@ -189,6 +191,7 @@
         <label>E-mail <input name="contact_email" type="email"></label>
         <label>Disponible le <input name="available_on" type="date"></label>
         <label class="wide">Précision sur la disponibilité <input name="available_note" placeholder="Ex. le matin, prévenir la veille"></label>
+        <label class="full">Message pour l'apporteur <textarea name="message" rows="3" placeholder="Ce que vous voulez lui dire : contexte, points d'attention, ce que vous attendez de la visite"></textarea></label>
         <button class="btn primary full" type="submit">Affecter et envoyer l'e-mail</button>
         <p class="ok-msg full" id="dossier-msg"></p>
       </form>

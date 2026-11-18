@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
       const to = await orgEmails(d.org_id);
       if (!to.length) throw new Error('Aucune personne rattachée à la société ' + (org?.name ?? ''));
       await sendViaOdoo(to.join(','), `[RaYSun] Nouveau dossier pour ${org?.name ?? 'vous'} : ${d.prospect}`,
-        `<p>Bonjour,</p><p>RaYSun vous confie un nouveau dossier : <b>${esc(d.prospect)}</b>.</p>` + fiche(d) +
+        `<p>Bonjour,</p><p>RaYSun vous confie un nouveau dossier : <b>${esc(d.prospect)}</b>.</p>` +
+        (d.message ? `<p style="background:#FBEBDB;border-radius:10px;padding:10px 14px;white-space:pre-line">${esc(d.message)}</p>` : '') + fiche(d) +
         `<p>Merci de confirmer sur la plateforme que vous prenez ce dossier :<br>` +
         `<a href="${SITE}/dossiers.html">${SITE}/dossiers.html</a></p>` +
         `<p>Une question ? Répondez à cet e-mail.</p>`);
