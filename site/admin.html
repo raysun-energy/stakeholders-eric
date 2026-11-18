@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CityWatt — Suivi des contacts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <style>
     body { display: block; }
@@ -11,25 +13,25 @@
     .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 20px 0 12px; }
     .toolbar h2 { margin: 0; font-size: 18px; flex: 1; }
     .toolbar .btn.primary { width: auto; }
-    .toolbar .show-done { font-size: 14px; color: #555; display: flex; gap: 6px; align-items: center; }
-    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .toolbar .show-done { font-size: 14px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
     table { border-collapse: collapse; width: 100%; font-size: 14px; }
     th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    th { background: var(--bg); font-weight: 600; white-space: nowrap; }
+    th { background: var(--bg); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
     td small { color: var(--muted); display: block; }
     td select, td textarea { min-width: 150px; }
     .stats { display: flex; gap: 10px; flex-wrap: wrap; }
-    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
-    .stat b { display: block; font-size: 22px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 10px 14px; }
+    .stat b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
     .member-form { display: grid; grid-template-columns: 2fr 2fr 1fr 1.5fr 2fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
-    .target-editor { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+    .target-editor { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 12px 14px; }
     .target-editor textarea { width: 100%; font: inherit; font-size: 14px; }
     .target-editor .btn { width: auto; margin-top: 8px; }
     td input.org { min-width: 120px; }
     .pw { display: flex; gap: 6px; }
     .pw input { flex: 1; }
     .pw .btn { padding: 8px 10px; }
-    .credentials { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; margin: 8px 0 12px; font-size: 14px; }
+    .credentials { background: var(--accent-soft); border-radius: 14px; padding: 12px 14px; margin: 8px 0 12px; font-size: 14px; }
     .credentials pre { white-space: pre-wrap; font: 13px/1.5 ui-monospace, Menlo, monospace; background: #fff; border-radius: 6px; padding: 10px; margin: 8px 0; }
     .member-form label { font-size: 13px; }
     .member-form .btn { width: auto; }
