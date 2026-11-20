@@ -13,23 +13,44 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
 
 async function etat(ok: boolean, message: string, sourceAt: string | null = null) {
-  await sb.from('amb_fees_sync').upsert({ id: true, at: new Date().toISOString(), ok, message: message.slice(0, 300), source_at: sourceAt });
+  await sb.from('amb_fees_sync').upsert({ id: true, at: new Date().toISOString(), ok, message: message.slice(0, 700), source_at: sourceAt });
 }
 
 type Contrat = { operationId: string; ean: string; apporteurId: string; debut: string | null; fin: string | null; tarifConso: number | null; tarifProd: number | null };
 
 Deno.serve(async () => {
   try {
-    const url = (Deno.env.get('FEES_SUPABASE_URL') ?? '').trim().replace(/\/+$/, '');
+    // Seule l'origine compte : une adresse collée avec « /rest/v1 » ou une barre finale est acceptée.
+    const brut = (Deno.env.get('FEES_SUPABASE_URL') ?? '').trim();
+    const url = (() => { try { return new URL(brut).origin; } catch { return ''; } })();
     const key = (Deno.env.get('FEES_SUPABASE_SERVICE_KEY') ?? '').trim();
-    if (!url || !key) throw new Error('Secrets FEES_SUPABASE_URL / FEES_SUPABASE_SERVICE_KEY à définir');
+    if (!brut || !key) throw new Error('Secrets FEES_SUPABASE_URL / FEES_SUPABASE_SERVICE_KEY à définir');
+    if (!url) throw new Error('FEES_SUPABASE_URL n’est pas une adresse valide (attendu : https://xxxx.supabase.co)');
 
     const res = await fetch(`${url}/rest/v1/fees_courant?select=data,updated_at&order=updated_at.desc&limit=1`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
     });
-    if (!res.ok) throw new Error(`Lecture de l'outil Fees refusée (HTTP ${res.status})`);
+    if (!res.ok) {
+      // Diagnostic sans secret : hôte interrogé, réponse du serveur et, si la table manque, tables réellement présentes.
+      const hote = new URL(url).host;
+      const corps = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 120);
+      let tables = '';
+      if (res.status === 404) {
+        const spec = await fetch(`${url}/rest/v1/`, { headers: { apikey: key, Authorization: `Bearer ${key}` } }).then((r) => r.json()).catch(() => null);
+        const noms = Object.keys(spec?.paths ?? {}).map((x) => x.replace(/^\//, '')).filter((x) => x && !x.startsWith('rpc/'));
+        tables = spec ? ` ; tables visibles : ${noms.join(', ') || 'aucune'}` : ' ; ce serveur ne répond pas comme un projet Supabase';
+      }
+      throw new Error(`Lecture de l'outil Fees refusée (HTTP ${res.status}) sur ${hote} : ${corps}${tables}`);
+    }
     const [doc] = await res.json();
-    if (!doc?.data) throw new Error("L'outil Fees n'a pas encore de données enregistrées en ligne");
+    if (!doc?.data) {
+      // Aucune ligne : soit rien n'est enregistré en ligne, soit la clé n'est pas la clé de service et les règles d'accès masquent tout.
+      const genre = key.startsWith('sb_publishable_') ? 'publishable' : key.startsWith('sb_secret_') ? 'secret'
+        : (() => { try { return JSON.parse(atob(key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role ?? 'inconnu'; } catch { return 'inconnu'; } })();
+      throw new Error(['service_role', 'secret'].includes(genre)
+        ? "L'outil Fees n'a aucune donnée enregistrée en ligne dans ce projet (table fees_courant vide)"
+        : `La clé enregistrée est de type « ${genre} » : il faut la clé service_role (ou « secret »), sinon les données restent invisibles`);
+    }
     const d = doc.data as { apporteurs?: { id: string; nom: string }[]; contrats?: Contrat[]; imports?: { operationId: string; mois: string; lignes: { ean: string; consoPartagee: number; injPartagee: number }[] }[] };
 
     // Contrat applicable à un EAN pour un mois dans une opération : le premier trouvé (comme indexContrats du moteur).
