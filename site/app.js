@@ -101,6 +101,7 @@ async function refreshCandidates() {
   const hint = $('#cand-hint');
   const on = $('#show-candidates').checked;
   const hideAll = () => state.candMarkers.forEach((m) => m.hide());
+  $('#cand-export').hidden = !on;
   if (!on) { hint.hidden = true; hideAll(); return; }
   hint.hidden = false;
   if (state.map.getZoom() < CAND_ZOOM) { hideAll(); hint.textContent = 'Zoomez sur un quartier ou un zoning pour voir les entreprises à démarcher.'; return; }
@@ -126,6 +127,37 @@ async function refreshCandidates() {
   hint.textContent = !total ? 'Aucune entreprise à démarcher dans cette zone.'
     : total > data.length ? `${data.length} entreprises affichées sur ${total} dans cette zone (les plus grands sites). Zoomez pour voir les autres.`
       : `${total} entreprise${total > 1 ? 's' : ''} à démarcher dans cette zone.`;
+}
+
+// Export en bloc de toutes les entreprises à démarcher (CSV lisible par Excel), par pages de 1000.
+async function exportCandidates(btn) {
+  const label = btn.textContent;
+  btn.disabled = true;
+  try {
+    const rows = [];
+    for (let offset = 0; ; offset += 1000) {
+      btn.textContent = `Préparation… ${rows.length} entreprises`;
+      const { data, error } = await sb.rpc('amb_candidates_export', { p_offset: offset });
+      if (error) throw error;
+      rows.push(...data);
+      if (data.length < 1000) break;
+    }
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const head = ['Nom', 'Adresse', 'Région', 'Activité', 'Conso min (MWh/an)', 'Conso max (MWh/an)', 'Toiture (m²)', 'Potentiel solaire (MWh/an)', 'Latitude', 'Longitude'];
+    const lines = rows.map((c) => [c.nom, c.adresse, c.region, CAND_CATEGORIES[c.categorie] || c.categorie,
+      c.conso_min_kwh != null ? Math.round(c.conso_min_kwh / 1000) : '', c.conso_max_kwh != null ? Math.round(c.conso_max_kwh / 1000) : '',
+      c.surface_toit_m2, c.pv_max_kwh_an != null ? Math.round(c.pv_max_kwh_an / 1000) : '', c.lat, c.lng].map(cell).join(';'));
+    const blob = new Blob(['\ufeff' + [head.map(cell).join(';'), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `entreprises-a-demarcher-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (e) {
+    console.error(e);
+    $('#cand-hint').textContent = 'L’export a échoué. Réessayez dans un instant.';
+  }
+  btn.disabled = false; btn.textContent = label;
 }
 
 function selectCandidate(id) {
@@ -847,6 +879,7 @@ async function start() {
   map.onZoom(updateLabels);
   map.onMove(() => refreshCandidates().catch(console.error));
   $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
+  $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
   renderMarkers();
   updateLabels();
   const hash = decodeURIComponent(location.hash.slice(1));
