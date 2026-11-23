@@ -38,12 +38,12 @@
   <main class="layout">
     <aside class="sidebar">
       <div class="intro">
-        <p>Cliquez sur un immeuble sur la carte ou dans la liste. Si le nom, l’adresse ou une société vous parle, dites-le nous. Vous connaissez un autre lieu à prospecter ? Utilisez le bouton « + ».</p>
+        <p>Zoomez sur un quartier ou un zoning : les points bleus sont les entreprises que nous aimerions approcher. Si l’une d’elles vous parle, cliquez dessus et dites-le nous. Vous connaissez un autre lieu ? Utilisez le bouton « + ».</p>
         <input id="search" type="search" placeholder="Rechercher un immeuble, une société, une commune…">
         <div class="filters">
           <label><input type="checkbox" id="show-members" autocomplete="off"> <i class="dot member"></i><span>Membres des communautés (<span id="members-count">0</span>)</span></label>
           <label><input type="checkbox" id="show-suggestions" autocomplete="off"> <i class="dot sugg"></i><span>Lieux proposés</span></label>
-          <label title="Entreprises repérées autour de nos membres et pas encore approchées. Zoomez sur un quartier pour les voir."><input type="checkbox" id="show-candidates" autocomplete="off"> <i class="dot cand"></i><span>Entreprises à démarcher</span></label>
+          <label title="Entreprises repérées autour de nos membres et pas encore approchées. Zoomez sur un quartier pour les voir."><input type="checkbox" id="show-candidates" autocomplete="off" checked> <i class="dot cand"></i><span>Entreprises à démarcher</span></label>
           <label id="dossiers-filter" hidden><input type="checkbox" id="show-dossiers" autocomplete="off" checked> <i class="dot dossier"></i><span>Dossiers apporteurs (<span id="dossiers-count">0</span>)</span></label>
           <label id="converted-filter" hidden><input type="checkbox" id="show-converted" autocomplete="off"> <span>Afficher les points convertis / traités</span></label>
         </div>

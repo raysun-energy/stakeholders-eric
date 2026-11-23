@@ -160,6 +160,33 @@ async function exportCandidates(btn) {
   btn.disabled = false; btn.textContent = label;
 }
 
+// Équipe : envoie l'entreprise dans Odoo (fonction zc-opportunite de l'outil Zoning as Community, côté serveur).
+const ZC_ODOO_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-opportunite';
+async function sendCandidateToOdoo(c, btn) {
+  const msg = $('#cand-odoo-msg');
+  btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Envoi dans Odoo…';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(ZC_ODOO_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ place_id: c.id }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.ok) throw new Error(j.error || `Erreur ${res.status}`);
+    const url = j.url || `https://raysun.odoo.com/odoo/crm/${Number(j.odoo_lead_id)}`;
+    msg.className = 'small'; msg.innerHTML = `${j.deja ? 'Cette entreprise était déjà dans Odoo.' : 'Opportunité créée dans Odoo.'} <a href="${esc(url)}" target="_blank" rel="noopener">Ouvrir la fiche</a>`;
+    state.candMarkers.get(c.id)?.hide();
+    state.candMarkers.delete(c.id);
+    state.candidates.delete(c.id);
+    state.candSelected = null;
+  } catch (e) {
+    console.error(e);
+    msg.className = 'small error'; msg.textContent = `L’envoi a échoué : ${e.message}`;
+    btn.disabled = false;
+  }
+}
+
 function selectCandidate(id) {
   const c = state.candidates.get(id);
   if (!c) return;
@@ -183,7 +210,12 @@ function selectCandidate(id) {
     </dl>
     <p class="muted small">Estimations automatiques d’après l’activité et la toiture : des ordres de grandeur, pas des mesures.</p>
     <div class="pitch"><strong>Vous connaissez cette entreprise ?</strong><br>Une introduction ou un simple nom de contact nous aide à ouvrir la porte.</div>
-    <button type="button" class="btn primary" id="cand-propose" style="margin-top:12px">Je connais quelqu’un ici</button>`;
+    <button type="button" class="btn primary" id="cand-propose" style="margin-top:12px">Je connais quelqu’un ici</button>
+    ${state.user.role === 'admin' ? `<div class="admin-actions"><strong>Équipe</strong>
+      <p class="muted small" style="margin:4px 0 8px">Crée la société et une opportunité « Zoning as Community » dans Odoo, à votre nom. L’entreprise quitte ensuite cette carte.</p>
+      <div class="admin-buttons"><button type="button" class="btn secondary" id="cand-odoo">Envoyer dans Odoo</button></div>
+      <p class="small" id="cand-odoo-msg" style="margin:8px 0 0"></p></div>` : ''}`;
+  $('#cand-odoo')?.addEventListener('click', (e) => sendCandidateToOdoo(c, e.currentTarget));
   $('#cand-propose').addEventListener('click', () => startSuggestion({ name: c.nom, address: c.adresse, lat: c.lat, lng: c.lng }));
   openPanel();
 }
@@ -881,6 +913,7 @@ async function start() {
   $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
   renderMarkers();
+  refreshCandidates().catch(console.error);
   updateLabels();
   const hash = decodeURIComponent(location.hash.slice(1));
   if (hash.startsWith('lieu-')) {
