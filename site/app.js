@@ -46,10 +46,13 @@ function labelSide(lead) {
 function renderMarkers() {
   const map = state.map;
   // Membres d'abord, pour qu'ils restent sous les immeubles.
+  // L'équipe peut cliquer un membre pour chercher des entreprises autour de lui.
+  const team = state.user.role === 'admin';
   state.memberMarkers = state.members.map((m) => map.addMarker({
     lat: m.lat, lng: m.lng, zIndex: 1,
-    html: '<div class="member-dot"></div>',
+    html: `<div class="member-dot${team && m.id ? ' clickable' : ''}"></div>`,
     title: m.name ? `${m.name} — ${m.operation}` : `Membre — ${m.operation}`,
+    onClick: team && m.id ? () => selectMember(m) : undefined,
   }));
   for (const lead of state.leads) {
     if (lead.lat == null) continue;
@@ -158,6 +161,70 @@ async function exportCandidates(btn) {
     $('#cand-hint').textContent = 'L’export a échoué. Réessayez dans un instant.';
   }
   btn.disabled = false; btn.textContent = label;
+}
+
+// --- Zonings : contours dessinés pour la zone affichée, à partir d'un certain zoom ---
+const ZONING_ZOOM = 11;
+let zoningSeq = 0;
+async function refreshZonings() {
+  if (!$('#show-zonings').checked || state.map.getZoom() < ZONING_ZOOM) { state.map.setShapes([]); return; }
+  const b = state.map.getBounds();
+  if (!b) return;
+  const n = ++zoningSeq;
+  const { data, error } = await sb.rpc('amb_zonings', { p_min_lat: b.minLat, p_max_lat: b.maxLat, p_min_lng: b.minLng, p_max_lng: b.maxLng });
+  if (n !== zoningSeq) return;
+  if (error) { console.error(error); return; }
+  state.map.setShapes(data.map((z) => ({ id: z.id, name: z.nom, geometry: z.geometry })));
+}
+
+// --- Équipe : recherche d'entreprises candidates autour d'un membre ---
+// Appelle la fonction zc-voisins de l'outil Zoning as Community (côté serveur) : entreprises de la BCE dans le rayon,
+// estimation de la consommation, analyse des toitures (Google Solar) pour les plus prometteuses. Résultats gardés en base.
+const ZC_VOISINS_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-voisins';
+function selectMember(m) {
+  cancelDraft();
+  clearSelection();
+  $('#panel-body').innerHTML = `
+    <div class="panel-head">
+      <span class="tag" style="background:#E3F2E9;color:#1E7F4E">Membre</span>
+      <h2>${esc(m.name || 'Membre')}</h2>
+      <p class="muted">${esc(m.operation)}</p>
+    </div>
+    <div class="admin-actions"><strong>Équipe : chercher des entreprises autour de ce membre</strong>
+      <p class="muted small" style="margin:4px 0 8px">Cherche dans la BCE les entreprises de la même Région dans le rayon choisi, estime leur consommation et analyse les toitures des plus prometteuses. Compter 10 à 30 secondes, et quelques centimes d’API Google par recherche.</p>
+      <label class="small">Rayon
+        <select id="member-radius" style="margin-top:4px"><option value="500">500 m</option><option value="1000" selected>1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select>
+      </label>
+      <div class="admin-buttons" style="margin-top:10px"><button type="button" class="btn secondary" id="member-search">Chercher les entreprises</button></div>
+      <p class="small" id="member-search-msg" style="margin:8px 0 0"></p>
+    </div>`;
+  $('#member-search').addEventListener('click', async (e) => {
+    const btn = e.currentTarget, msg = $('#member-search-msg');
+    btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Recherche en cours…';
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const res = await fetch(ZC_VOISINS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ lat: m.lat, lng: m.lng, rayon_m: Number($('#member-radius').value), membre_id: m.id, source: 'bce' }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || `Erreur ${res.status}`);
+      const n = (j.candidats || []).length;
+      msg.className = 'small';
+      msg.textContent = n ? `${n} entreprise${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''} autour de ce membre. Elles sont maintenant sur la carte (points bleus).`
+        : 'Aucune entreprise trouvée dans ce rayon.';
+      $('#show-candidates').checked = true;
+      state.map.flyTo(m.lat, m.lng, 15);
+      await refreshCandidates();
+    } catch (err) {
+      console.error(err);
+      msg.className = 'small error'; msg.textContent = `La recherche a échoué : ${err.message}`;
+    }
+    btn.disabled = false;
+  });
+  openPanel();
+  state.map.flyTo(m.lat, m.lng, 14);
 }
 
 // Équipe : envoie l'entreprise dans Odoo (fonction zc-opportunite de l'outil Zoning as Community, côté serveur).
@@ -909,11 +976,13 @@ async function start() {
   const [map] = await Promise.all([createMap($('#map')), loadData()]);
   state.map = map;
   map.onZoom(updateLabels);
-  map.onMove(() => refreshCandidates().catch(console.error));
+  map.onMove(() => { refreshCandidates().catch(console.error); refreshZonings().catch(console.error); });
+  $('#show-zonings').addEventListener('change', () => refreshZonings().catch(console.error));
   $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
   renderMarkers();
   refreshCandidates().catch(console.error);
+  refreshZonings().catch(console.error);
   updateLabels();
   const hash = decodeURIComponent(location.hash.slice(1));
   if (hash.startsWith('lieu-')) {

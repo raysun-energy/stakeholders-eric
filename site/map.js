@@ -3,7 +3,8 @@
 //   addMarker({ lat, lng, html, title, zIndex, onClick }) -> { setHtml, show, hide }
 //   flyTo(lat, lng, zoom), fitBounds([[lat, lng], ...]), getZoom(), onZoom(cb),
 //   onMapClick(cb | null), geocode(adresse) -> { lat, lng, address } | null,
-//   getBounds() -> { minLat, maxLat, minLng, maxLng } | null, onMove(cb) (après un déplacement ou un zoom)
+//   getBounds() -> { minLat, maxLat, minLng, maxLng } | null, onMove(cb) (après un déplacement ou un zoom),
+//   setShapes([{ id, name, geometry (GeoJSON) }]) : remplace les contours dessinés (zonings)
 
 const BRUSSELS = { lat: 50.85, lng: 4.36 };
 
@@ -79,6 +80,13 @@ async function createGoogleMap(el, { key, mapId }) {
       return { minLat: sw.lat(), maxLat: ne.lat(), minLng: sw.lng(), maxLng: ne.lng() };
     },
     onMove(cb) { map.addListener('idle', cb); },
+    setShapes(shapes) {
+      map.data.forEach((f) => map.data.remove(f));
+      map.data.setStyle({ fillColor: '#2E5E8C', fillOpacity: 0.1, strokeColor: '#2E5E8C', strokeWeight: 1.2, clickable: false });
+      if (shapes.length) {
+        map.data.addGeoJson({ type: 'FeatureCollection', features: shapes.map((s) => ({ type: 'Feature', id: s.id, properties: { name: s.name }, geometry: s.geometry })) });
+      }
+    },
     onMapClick(cb) { clickHandler = cb; map.setOptions({ draggableCursor: cb ? 'crosshair' : null }); },
     async geocode(address) {
       const { Geocoder } = await google.maps.importLibrary('geocoding');
@@ -129,6 +137,11 @@ function createLeafletMap(el) {
       return { minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast() };
     },
     onMove(cb) { map.on('moveend', cb); },
+    setShapes(shapes) {
+      if (this._shapes) this._shapes.remove();
+      this._shapes = shapes.length ? L.geoJSON({ type: 'FeatureCollection', features: shapes.map((s) => ({ type: 'Feature', properties: { name: s.name }, geometry: s.geometry })) },
+        { style: { color: '#2E5E8C', weight: 1.2, fillColor: '#2E5E8C', fillOpacity: 0.1 }, interactive: false }).addTo(map) : null;
+    },
     onMapClick(cb) { clickHandler = cb; el.style.cursor = cb ? 'crosshair' : ''; },
     async geocode(address) {
       const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=be&q='

@@ -70,6 +70,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--sun2); outl
 .dot.lead, .pin.lead { background: #F08A00; }
 .dot.dossier { background: #141414; }
 .dot.cand, .pin.cand { background: #2E5E8C; }
+.dot.zoning { background: rgba(46,94,140,.15); border: 1.5px solid #2E5E8C; border-radius: 2px; }
+.member-dot.clickable { cursor: pointer; width: 12px; height: 12px; left: -6px; top: -6px; }
 .pin.cand { width: 12px; height: 12px; left: -6px; top: -6px; border-width: 1.5px; }
 .pin.cand.selected { width: 20px; height: 20px; left: -10px; top: -10px; box-shadow: 0 0 0 4px rgba(46,94,140,.35), 0 1px 4px rgba(0,0,0,.4); }
 .pin.lead { width: 18px; height: 18px; left: -9px; top: -9px; }
