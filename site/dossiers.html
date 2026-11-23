@@ -80,6 +80,11 @@
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     tr.total td { font-weight: 700; background: var(--bg); }
     td small { color: var(--muted); display: block; }
+    .link.calc { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+    tr.detail > td { background: var(--bg); padding: 14px; }
+    .calc-table { font-size: 13px; }
+    .calc-table tr.op td { font-weight: 700; background: var(--surface); padding-top: 12px; }
+    .calc-table th, .calc-table td { padding: 7px 10px; }
 
     /* Outils de l'équipe */
     .admin { border: 1px dashed var(--border); border-radius: 22px; padding: 4px 18px 18px; margin-top: 40px; background: var(--surface); }
@@ -175,9 +180,9 @@
       <div class="cards" id="dossiers"></div>
 
       <h2>Facturation</h2>
-      <p class="lead-in">Commissions hors TVA par mois, calculées par RaYSun à partir des volumes d'énergie partagés.</p>
+      <p class="lead-in">Commissions hors TVA par mois, calculées par RaYSun à partir des volumes d'énergie partagés. Pour chaque mois, le détail du calcul est disponible client par client.</p>
       <div class="table-wrap"><table>
-        <thead><tr><th>Mois</th><th>Source</th><th>Objet</th><th class="num">Montant HTVA</th><th id="inv-actions"></th></tr></thead>
+        <thead><tr><th>Mois</th><th>Source</th><th>Détail</th><th class="num">Montant HTVA</th><th id="inv-actions"></th></tr></thead>
         <tbody id="invoices"></tbody>
       </table></div>
     </div>

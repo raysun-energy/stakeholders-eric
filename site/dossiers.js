@@ -3,6 +3,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const euro = (n) => n == null ? '' : Number(n).toLocaleString('fr-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+const euro2 = (n) => n == null ? '' : Number(n).toLocaleString('fr-BE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct = (n) => n == null ? '' : Number(n).toLocaleString('fr-BE', { maximumFractionDigits: 1 }) + ' %';
 const dateFr = (d) => d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
 const periodLabel = (p) => p.includes('-T') ? `${p.slice(6)}${p.slice(6) === '1' ? 'er' : 'e'} trimestre ${p.slice(0, 4)}` : `Année ${p}`;
@@ -196,23 +197,62 @@ function renderInvoices() {
   if (!state.invoices.length) { $('#invoices').innerHTML = '<tr><td colspan="5" class="muted">Aucune facture enregistrée.</td></tr>'; return; }
   const rows = [];
   let year = null, quarter = null, qSum = 0, ySum = 0;
-  const flushQ = () => { if (quarter) rows.push(`<tr class="total"><td colspan="3">Total ${esc(periodLabel(quarter))}</td><td class="num">${esc(euro(qSum))}</td>${state.admin ? '<td></td>' : ''}</tr>`); qSum = 0; };
-  const flushY = () => { if (year) rows.push(`<tr class="total"><td colspan="3">Total année ${esc(year)}</td><td class="num">${esc(euro(ySum))}</td>${state.admin ? '<td></td>' : ''}</tr>`); ySum = 0; };
+  const flushQ = () => { if (quarter) rows.push(`<tr class="total"><td colspan="3">Total ${esc(periodLabel(quarter))}</td><td class="num">${esc(euro2(qSum))}</td>${state.admin ? '<td></td>' : ''}</tr>`); qSum = 0; };
+  const flushY = () => { if (year) rows.push(`<tr class="total"><td colspan="3">Total année ${esc(year)}</td><td class="num">${esc(euro2(ySum))}</td>${state.admin ? '<td></td>' : ''}</tr>`); ySum = 0; };
   for (const i of state.invoices) {
     const q = quarterOf(i.invoice_date), y = i.invoice_date.slice(0, 4);
     if (q !== quarter) { flushQ(); if (y !== year) { flushY(); year = y; } quarter = q; }
     qSum += Number(i.amount_eur); ySum += Number(i.amount_eur);
     const mois = i.period_month ? new Date(i.period_month + '-15').toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : dateFr(i.invoice_date);
-    rows.push(`<tr data-id="${esc(i.id)}"><td>${esc(mois)}</td>
+    rows.push(`<tr data-id="${esc(i.id)}" data-org="${esc(i.org_id)}" data-month="${esc(i.period_month ?? '')}"><td>${esc(mois)}</td>
       <td>${esc(i.reference)}${state.admin && !state.org ? `<small>${esc(orgName(i.org_id))}</small>` : ''}</td>
-      <td>${esc(i.label)}</td><td class="num">${esc(euro(i.amount_eur))}</td>
+      <td>${i.period_month ? `<button type="button" class="link calc" data-detail aria-expanded="false">Voir le calcul et les clients</button>` : esc(i.label)}</td><td class="num">${esc(euro2(i.amount_eur))}</td>
       ${state.admin ? `<td>${i.source === 'outil-fees' ? '' : '<button class="link danger" data-del-invoice>Supprimer</button>'}</td>` : ''}</tr>`);
   }
   flushQ(); flushY();
   $('#invoices').innerHTML = rows.join('');
 }
 
+// Détail du calcul d'un mois : une ligne par client (EAN), regroupées par opération de partage.
+function detailHtml(lines) {
+  if (!lines.length) return '<p class="muted">Aucun détail disponible pour ce mois.</p>';
+  const mwh = (kwh) => (Number(kwh) / 1000).toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const tarif = (t) => Number(t) ? Number(t).toLocaleString('fr-BE', { maximumFractionDigits: 2 }) + ' €/MWh' : '';
+  const sum = (xs, k) => xs.reduce((a, x) => a + Number(x[k]), 0);
+  const ops = [...new Set(lines.map((l) => l.operation || 'Opération'))];
+  const corps = ops.map((op) => {
+    const ls = lines.filter((l) => (l.operation || 'Opération') === op).sort((a, b) => (a.client || '').localeCompare(b.client || '', 'fr') || a.ean.localeCompare(b.ean));
+    return `<tr class="op"><td colspan="8">${esc(op)}</td></tr>` + ls.map((l) => `<tr>
+        <td>${esc(l.client || 'Client')}<small>EAN ${esc(l.ean)}</small></td>
+        <td class="num">${Number(l.conso_kwh) ? mwh(l.conso_kwh) : ''}</td><td class="num">${Number(l.conso_kwh) ? tarif(l.tarif_conso) : ''}</td><td class="num">${Number(l.fee_conso) ? esc(euro2(l.fee_conso)) : ''}</td>
+        <td class="num">${Number(l.inj_kwh) ? mwh(l.inj_kwh) : ''}</td><td class="num">${Number(l.inj_kwh) ? tarif(l.tarif_prod) : ''}</td><td class="num">${Number(l.fee_prod) ? esc(euro2(l.fee_prod)) : ''}</td>
+        <td class="num"><b>${esc(euro2(Number(l.fee_conso) + Number(l.fee_prod)))}</b></td></tr>`).join('')
+      + `<tr class="total"><td>Total ${esc(op)} · ${ls.length} point(s)</td><td class="num">${mwh(sum(ls, 'conso_kwh'))}</td><td></td><td class="num">${esc(euro2(sum(ls, 'fee_conso')))}</td>
+        <td class="num">${mwh(sum(ls, 'inj_kwh'))}</td><td></td><td class="num">${esc(euro2(sum(ls, 'fee_prod')))}</td><td class="num">${esc(euro2(sum(ls, 'fee_conso') + sum(ls, 'fee_prod')))}</td></tr>`;
+  }).join('');
+  return `<p class="muted small" style="margin:0 0 8px">Commission d'un point = consommation partagée × tarif consommation + injection partagée × tarif injection. Volumes du gestionnaire de réseau, en MWh.</p>
+    <div class="table-wrap"><table class="calc-table">
+      <thead><tr><th>Client</th><th class="num">Conso partagée</th><th class="num">Tarif</th><th class="num">Commission</th><th class="num">Injection partagée</th><th class="num">Tarif</th><th class="num">Commission</th><th class="num">Total</th></tr></thead>
+      <tbody>${corps}</tbody></table></div>`;
+}
+
 $('#invoices').addEventListener('click', async (e) => {
+  const det = e.target.closest('[data-detail]');
+  if (det) {
+    const tr = det.closest('tr'), next = tr.nextElementSibling;
+    if (next?.classList.contains('detail')) { next.remove(); det.setAttribute('aria-expanded', 'false'); det.textContent = 'Voir le calcul et les clients'; return; }
+    det.disabled = true;
+    try {
+      const lines = must(await sb.from('amb_org_fee_lines').select('*').eq('org_id', tr.dataset.org).eq('period_month', tr.dataset.month)) ?? [];
+      const row = document.createElement('tr');
+      row.className = 'detail';
+      row.innerHTML = `<td colspan="5">${detailHtml(lines)}</td>`;
+      tr.after(row);
+      det.setAttribute('aria-expanded', 'true'); det.textContent = 'Masquer le calcul';
+    } catch (err) { fail(err, 'Le détail n\'a pas pu être chargé.'); }
+    det.disabled = false;
+    return;
+  }
   const btn = e.target.closest('[data-del-invoice]'); if (!btn) return;
   if (!confirm('Supprimer cette facture ?')) return;
   try { must(await sb.from('amb_org_invoices').delete().eq('id', btn.closest('tr').dataset.id)); await loadSpace(); }

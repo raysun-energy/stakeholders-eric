@@ -16,7 +16,7 @@ async function etat(ok: boolean, message: string, sourceAt: string | null = null
   await sb.from('amb_fees_sync').upsert({ id: true, at: new Date().toISOString(), ok, message: message.slice(0, 700), source_at: sourceAt });
 }
 
-type Contrat = { operationId: string; ean: string; apporteurId: string; debut: string | null; fin: string | null; tarifConso: number | null; tarifProd: number | null };
+type Contrat = { id: string; client?: string; operationId: string; ean: string; apporteurId: string; debut: string | null; fin: string | null; tarifConso: number | null; tarifProd: number | null };
 
 Deno.serve(async () => {
   try {
@@ -51,7 +51,7 @@ Deno.serve(async () => {
         ? "L'outil Fees n'a aucune donnée enregistrée en ligne dans ce projet (table fees_courant vide)"
         : `La clé enregistrée est de type « ${genre} » : il faut la clé service_role (ou « secret »), sinon les données restent invisibles`);
     }
-    const d = doc.data as { apporteurs?: { id: string; nom: string }[]; contrats?: Contrat[]; imports?: { operationId: string; mois: string; lignes: { ean: string; consoPartagee: number; injPartagee: number }[] }[] };
+    const d = doc.data as { operations?: { id: string; nom: string }[]; apporteurs?: { id: string; nom: string }[]; contrats?: Contrat[]; imports?: { operationId: string; mois: string; lignes: { ean: string; consoPartagee: number; injPartagee: number }[] }[] };
 
     // Contrat applicable à un EAN pour un mois dans une opération : le premier trouvé (comme indexContrats du moteur).
     const parEan = new Map<string, Contrat[]>();
@@ -62,14 +62,27 @@ Deno.serve(async () => {
     const actif = (c: Contrat, mois: string) => (!c.debut || mois >= c.debut) && (!c.fin || mois <= c.fin);
     const nom = new Map((d.apporteurs ?? []).map((a) => [a.id, a.nom]));
 
+    const operation = new Map((d.operations ?? []).map((o) => [o.id, o.nom]));
     const totaux = new Map<string, number>();   // « apporteur|mois » -> EUR
+    // Détail du calcul : une ligne par contrat (EAN) et par mois, registres additionnés, comme le moteur de l'outil.
+    type Ligne = { apporteur: string; mois: string; operation: string; client: string; ean: string; conso_kwh: number; inj_kwh: number; tarif_conso: number; tarif_prod: number; fee_conso: number; fee_prod: number };
+    const detail = new Map<string, Ligne>();
     for (const imp of d.imports ?? []) {
       for (const l of imp.lignes ?? []) {
         const c = parEan.get(`${imp.operationId}|${l.ean}`)?.find((x) => actif(x, imp.mois));
         if (!c) continue;
-        const fee = ((Number(l.consoPartagee) || 0) * (c.tarifConso ?? 0) + (Number(l.injPartagee) || 0) * (c.tarifProd ?? 0)) / 1000;
+        const conso = Number(l.consoPartagee) || 0, inj = Number(l.injPartagee) || 0;
+        const fc = (conso * (c.tarifConso ?? 0)) / 1000, fp = (inj * (c.tarifProd ?? 0)) / 1000;
         const k = `${c.apporteurId}|${imp.mois}`;
-        totaux.set(k, (totaux.get(k) ?? 0) + fee);
+        totaux.set(k, (totaux.get(k) ?? 0) + fc + fp);
+        const kd = `${c.id}|${imp.mois}`;
+        let li = detail.get(kd);
+        if (!li) {
+          li = { apporteur: nom.get(c.apporteurId) ?? '', mois: imp.mois, operation: operation.get(imp.operationId) ?? '', client: c.client ?? '', ean: c.ean,
+            conso_kwh: 0, inj_kwh: 0, tarif_conso: c.tarifConso ?? 0, tarif_prod: c.tarifProd ?? 0, fee_conso: 0, fee_prod: 0 };
+          detail.set(kd, li);
+        }
+        li.conso_kwh += conso; li.inj_kwh += inj; li.fee_conso += fc; li.fee_prod += fp;
       }
     }
     const rows = [...totaux].map(([k, montant]) => {
@@ -79,8 +92,11 @@ Deno.serve(async () => {
 
     const { data: n, error } = await sb.rpc('amb_fees_replace', { p_rows: rows });
     if (error) throw new Error(error.message);
+    const lignes = [...detail.values()].filter((l) => l.apporteur && (l.conso_kwh || l.inj_kwh));
+    const { data: nd, error: e2 } = await sb.rpc('amb_fee_lines_replace', { p_lines: lignes });
+    if (e2) throw new Error(e2.message);
     const societes = new Set(rows.map((r) => r.apporteur)).size;
-    await etat(true, `${n} mois repris pour ${societes} société(s)`, doc.updated_at ?? null);
+    await etat(true, `${n} mois repris pour ${societes} société(s), ${nd} lignes de détail`, doc.updated_at ?? null);
     return new Response(JSON.stringify({ ok: true, lignes: n, societes }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error(e);
