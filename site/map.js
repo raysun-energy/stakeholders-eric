@@ -2,7 +2,8 @@
 // Les deux implémentations exposent la même interface à app.js :
 //   addMarker({ lat, lng, html, title, zIndex, onClick }) -> { setHtml, show, hide }
 //   flyTo(lat, lng, zoom), fitBounds([[lat, lng], ...]), getZoom(), onZoom(cb),
-//   onMapClick(cb | null), geocode(adresse) -> { lat, lng, address } | null
+//   onMapClick(cb | null), geocode(adresse) -> { lat, lng, address } | null,
+//   getBounds() -> { minLat, maxLat, minLng, maxLng } | null, onMove(cb) (après un déplacement ou un zoom)
 
 const BRUSSELS = { lat: 50.85, lng: 4.36 };
 
@@ -72,6 +73,12 @@ async function createGoogleMap(el, { key, mapId }) {
     },
     getZoom: () => map.getZoom(),
     onZoom(cb) { map.addListener('zoom_changed', cb); },
+    getBounds() {
+      const b = map.getBounds(); if (!b) return null;
+      const sw = b.getSouthWest(), ne = b.getNorthEast();
+      return { minLat: sw.lat(), maxLat: ne.lat(), minLng: sw.lng(), maxLng: ne.lng() };
+    },
+    onMove(cb) { map.addListener('idle', cb); },
     onMapClick(cb) { clickHandler = cb; map.setOptions({ draggableCursor: cb ? 'crosshair' : null }); },
     async geocode(address) {
       const { Geocoder } = await google.maps.importLibrary('geocoding');
@@ -117,6 +124,11 @@ function createLeafletMap(el) {
     fitBounds(points) { map.fitBounds(points, { padding: [40, 40] }); },
     getZoom: () => map.getZoom(),
     onZoom(cb) { map.on('zoomend', cb); },
+    getBounds() {
+      const b = map.getBounds();
+      return { minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast() };
+    },
+    onMove(cb) { map.on('moveend', cb); },
     onMapClick(cb) { clickHandler = cb; el.style.cursor = cb ? 'crosshair' : ''; },
     async geocode(address) {
       const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=be&q='

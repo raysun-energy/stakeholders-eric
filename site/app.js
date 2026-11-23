@@ -4,6 +4,7 @@ const state = {
   suggestions: [], suggMarkers: new Map(),
   members: [], memberMarkers: [],
   dossiers: [], dossierMarkers: [],
+  candidates: new Map(), candMarkers: new Map(), candSelected: null,
   draft: null, // lieu en cours de proposition : { lat, lng, marker }
 };
 
@@ -83,6 +84,78 @@ function updateLabels() {
   document.body.classList.toggle('hide-labels', state.map.getZoom() < 12);
 }
 
+// --- Entreprises à démarcher (candidats de l'outil Zoning as Community) --------
+// Chargées pour la zone affichée seulement, à partir d'un certain zoom : la base en compte plusieurs milliers.
+
+const CAND_ZOOM = 14;
+const CAND_CATEGORIES = {
+  bureaux: 'Bureaux', horeca: 'Horeca', logistique: 'Logistique', commerce: 'Commerce', industrie: 'Industrie',
+  industrie_lourde: 'Industrie lourde', construction: 'Construction', sante: 'Santé', data_tech: 'Données et technologies',
+  sport_loisirs: 'Sport et loisirs', enseignement: 'Enseignement', autre: 'Autre activité',
+};
+const candHtml = (selected) => `<div class="pin cand${selected ? ' selected' : ''}"></div>`;
+const mwh = (kwh) => Math.round(kwh / 1000).toLocaleString('fr-BE');
+
+let candSeq = 0;
+async function refreshCandidates() {
+  const hint = $('#cand-hint');
+  const on = $('#show-candidates').checked;
+  const hideAll = () => state.candMarkers.forEach((m) => m.hide());
+  if (!on) { hint.hidden = true; hideAll(); return; }
+  hint.hidden = false;
+  if (state.map.getZoom() < CAND_ZOOM) { hideAll(); hint.textContent = 'Zoomez sur un quartier ou un zoning pour voir les entreprises à démarcher.'; return; }
+  const b = state.map.getBounds();
+  if (!b) return;
+  const n = ++candSeq;
+  const { data, error } = await sb.rpc('amb_candidates', { p_min_lat: b.minLat, p_max_lat: b.maxLat, p_min_lng: b.minLng, p_max_lng: b.maxLng });
+  if (n !== candSeq) return;                         // la carte a encore bougé entre-temps
+  if (error) { console.error(error); hint.textContent = 'Les entreprises ne peuvent pas être chargées pour le moment.'; return; }
+  const visible = new Set();
+  for (const c of data) {
+    visible.add(c.id);
+    state.candidates.set(c.id, c);
+    if (!state.candMarkers.has(c.id)) {
+      state.candMarkers.set(c.id, state.map.addMarker({
+        lat: c.lat, lng: c.lng, zIndex: 5, title: c.nom, html: candHtml(c.id === state.candSelected),
+        onClick: () => selectCandidate(c.id),
+      }));
+    }
+  }
+  state.candMarkers.forEach((m, id) => (visible.has(id) ? m.show() : m.hide()));
+  const total = data.length ? Number(data[0].total) : 0;
+  hint.textContent = !total ? 'Aucune entreprise à démarcher dans cette zone.'
+    : total > data.length ? `${data.length} entreprises affichées sur ${total} dans cette zone (les plus grands sites). Zoomez pour voir les autres.`
+      : `${total} entreprise${total > 1 ? 's' : ''} à démarcher dans cette zone.`;
+}
+
+function selectCandidate(id) {
+  const c = state.candidates.get(id);
+  if (!c) return;
+  cancelDraft();
+  clearSelection();
+  state.candSelected = id;
+  state.candMarkers.get(id)?.setHtml(candHtml(true));
+  const row = (k, v) => (v ? `<div class="kv"><dt>${k}</dt><dd>${v}</dd></div>` : '');
+  const conso = c.conso_max_kwh ? `${c.conso_min_kwh ? mwh(c.conso_min_kwh) + ' à ' : 'jusqu’à '}${mwh(c.conso_max_kwh)} MWh/an` : '';
+  $('#panel-body').innerHTML = `
+    <div class="panel-head">
+      <span class="tag" style="background:#E3EDF7;color:#2E5E8C">Entreprise à démarcher</span>
+      <h2>${esc(c.nom)}</h2>
+      <p class="muted">${esc(c.adresse)}</p>
+    </div>
+    <dl>
+      ${row('Activité', esc(CAND_CATEGORIES[c.categorie] || c.categorie))}
+      ${row('Consommation estimée', esc(conso))}
+      ${row('Toiture', c.surface_toit_m2 ? `${Number(c.surface_toit_m2).toLocaleString('fr-BE')} m²` : '')}
+      ${row('Potentiel solaire', c.pv_max_kwh_an ? `${mwh(c.pv_max_kwh_an)} MWh/an` : '')}
+    </dl>
+    <p class="muted small">Estimations automatiques d’après l’activité et la toiture : des ordres de grandeur, pas des mesures.</p>
+    <div class="pitch"><strong>Vous connaissez cette entreprise ?</strong><br>Une introduction ou un simple nom de contact nous aide à ouvrir la porte.</div>
+    <button type="button" class="btn primary" id="cand-propose" style="margin-top:12px">Je connais quelqu’un ici</button>`;
+  $('#cand-propose').addEventListener('click', () => startSuggestion({ name: c.nom, address: c.adresse, lat: c.lat, lng: c.lng }));
+  openPanel();
+}
+
 // --- Liste et filtres --------------------------------------------------------
 
 // Points convertis : retirés de la carte. Seule l'équipe peut les réafficher.
@@ -155,6 +228,7 @@ document.querySelectorAll('.filters input').forEach((i) => i.addEventListener('c
 // --- Sélection ---------------------------------------------------------------
 
 function clearSelection() {
+  if (state.candSelected) { state.candMarkers.get(state.candSelected)?.setHtml(candHtml(false)); state.candSelected = null; }
   const lead = state.leads.find((l) => l.id === state.selectedId);
   if (lead) state.markers.get(lead.id)?.setHtml(leadHtml(lead, false));
   const s = state.suggestions.find((x) => x.id === state.selectedId);
@@ -462,7 +536,7 @@ function cancelDraft() {
   document.body.classList.remove('placing');
 }
 
-function startSuggestion() {
+function startSuggestion(prefill) {
   clearSelection();
   applyFilters();
   document.body.classList.add('placing');
@@ -483,6 +557,12 @@ function startSuggestion() {
   }));
 
   wireLocate(form, () => [f.address.value, f.placeName.value], f.address);
+  // Depuis une entreprise à démarcher : nom, adresse et position déjà connus.
+  if (prefill && prefill.lat != null) {
+    f.placeName.value = prefill.name || '';
+    f.address.value = prefill.address || '';
+    placeDraft(prefill.lat, prefill.lng);
+  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -765,6 +845,8 @@ async function start() {
   const [map] = await Promise.all([createMap($('#map')), loadData()]);
   state.map = map;
   map.onZoom(updateLabels);
+  map.onMove(() => refreshCandidates().catch(console.error));
+  $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   renderMarkers();
   updateLabels();
   const hash = decodeURIComponent(location.hash.slice(1));
