@@ -48,6 +48,14 @@
           <label id="dossiers-filter" hidden><input type="checkbox" id="show-dossiers" autocomplete="off" checked> <i class="dot dossier"></i><span>Dossiers apporteurs (<span id="dossiers-count">0</span>)</span></label>
           <label id="converted-filter" hidden><input type="checkbox" id="show-converted" autocomplete="off"> <span>Afficher les points convertis / traités</span></label>
         </div>
+        <label class="small" id="cand-filter-box" hidden style="display:block;margin-top:8px">Afficher
+          <select id="cand-filter" style="margin-top:4px">
+            <option value="">Toutes les entreprises</option>
+            <option value="conso">Gros consommateurs (100 MWh/an et plus)</option>
+            <option value="prod">Gros producteurs potentiels (toiture de 500 m² et plus)</option>
+            <option value="both">Gros consommateurs avec grande toiture</option>
+          </select>
+        </label>
         <p class="muted small" id="cand-hint" hidden style="margin:8px 0 0"></p>
         <div id="zoning-import" hidden style="margin-top:8px">
           <button type="button" class="btn secondary" id="zoning-import-btn" style="font-size:13px">Mettre à jour les zonings</button>

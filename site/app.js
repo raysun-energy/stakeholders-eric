@@ -4,7 +4,7 @@ const state = {
   suggestions: [], suggMarkers: new Map(),
   members: [], memberMarkers: [],
   dossiers: [], dossierMarkers: [],
-  candidates: new Map(), candMarkers: new Map(), candSelected: null,
+  candidates: new Map(), candMarkers: new Map(), candSelected: null, candForce: false,
   draft: null, // lieu en cours de proposition : { lat, lng, marker }
 };
 
@@ -99,19 +99,26 @@ const CAND_CATEGORIES = {
 const candHtml = (selected) => `<div class="pin cand${selected ? ' selected' : ''}"></div>`;
 const mwh = (kwh) => Math.round(kwh / 1000).toLocaleString('fr-BE');
 
+// Filtre « gros consommateurs / gros producteurs potentiels », appliqué côté base (carte et export).
+function candFilter() {
+  const v = $('#cand-filter').value;
+  return { p_min_conso_kwh: v === 'conso' || v === 'both' ? 100000 : 0, p_min_toit_m2: v === 'prod' || v === 'both' ? 500 : 0 };
+}
+
 let candSeq = 0;
 async function refreshCandidates() {
   const hint = $('#cand-hint');
   const on = $('#show-candidates').checked;
   const hideAll = () => state.candMarkers.forEach((m) => m.hide());
   $('#cand-export').hidden = !on;
+  $('#cand-filter-box').hidden = !on;
   if (!on) { hint.hidden = true; hideAll(); return; }
   hint.hidden = false;
-  if (state.map.getZoom() < CAND_ZOOM) { hideAll(); hint.textContent = 'Zoomez sur un quartier ou un zoning pour voir les entreprises à démarcher.'; return; }
+  if (state.map.getZoom() < CAND_ZOOM && !state.candForce) { hideAll(); hint.textContent = 'Zoomez sur un quartier ou un zoning pour voir les entreprises à démarcher.'; return; }
   const b = state.map.getBounds();
   if (!b) return;
   const n = ++candSeq;
-  const { data, error } = await sb.rpc('amb_candidates', { p_min_lat: b.minLat, p_max_lat: b.maxLat, p_min_lng: b.minLng, p_max_lng: b.maxLng });
+  const { data, error } = await sb.rpc('amb_candidates', { p_min_lat: b.minLat, p_max_lat: b.maxLat, p_min_lng: b.minLng, p_max_lng: b.maxLng, ...candFilter() });
   if (n !== candSeq) return;                         // la carte a encore bougé entre-temps
   if (error) { console.error(error); hint.textContent = 'Les entreprises ne peuvent pas être chargées pour le moment.'; return; }
   const visible = new Set();
@@ -127,7 +134,7 @@ async function refreshCandidates() {
   }
   state.candMarkers.forEach((m, id) => (visible.has(id) ? m.show() : m.hide()));
   const total = data.length ? Number(data[0].total) : 0;
-  hint.textContent = !total ? 'Aucune entreprise à démarcher dans cette zone.'
+  hint.textContent = !total ? ($('#cand-filter').value ? 'Aucune entreprise ne correspond à ce filtre dans cette zone.' : 'Aucune entreprise à démarcher dans cette zone.')
     : total > data.length ? `${data.length} entreprises affichées sur ${total} dans cette zone (les plus grands sites). Zoomez pour voir les autres.`
       : `${total} entreprise${total > 1 ? 's' : ''} à démarcher dans cette zone.`;
 }
@@ -140,7 +147,7 @@ async function exportCandidates(btn) {
     const rows = [];
     for (let offset = 0; ; offset += 1000) {
       btn.textContent = `Préparation… ${rows.length} entreprises`;
-      const { data, error } = await sb.rpc('amb_candidates_export', { p_offset: offset });
+      const { data, error } = await sb.rpc('amb_candidates_export', { p_offset: offset, ...candFilter() });
       if (error) throw error;
       rows.push(...data);
       if (data.length < 1000) break;
@@ -223,6 +230,9 @@ async function importZonings(btn) {
 // Appelle la fonction zc-voisins de l'outil Zoning as Community (côté serveur) : entreprises de la BCE dans le rayon,
 // estimation de la consommation, analyse des toitures (Google Solar) pour les plus prometteuses. Résultats gardés en base.
 const ZC_VOISINS_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-voisins';
+// Le cercle de recherche reste affiché, avec les entreprises qu'il contient, jusqu'à la fermeture de la fiche.
+function clearRadius() { state.candForce = false; state.map.setCircle(null); }
+
 function selectMember(m) {
   cancelDraft();
   clearSelection();
@@ -240,6 +250,9 @@ function selectMember(m) {
       <div class="admin-buttons" style="margin-top:10px"><button type="button" class="btn secondary" id="member-search">Chercher les entreprises</button></div>
       <p class="small" id="member-search-msg" style="margin:8px 0 0"></p>
     </div>`;
+  // Cercle du rayon choisi, redessiné quand le rayon change.
+  const drawRadius = () => { state.candForce = true; state.map.setCircle({ lat: m.lat, lng: m.lng, radius: Number($('#member-radius').value) }); };
+  $('#member-radius').addEventListener('change', drawRadius);
   $('#member-search').addEventListener('click', async (e) => {
     const btn = e.currentTarget, msg = $('#member-search-msg');
     btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Recherche en cours…';
@@ -257,7 +270,7 @@ function selectMember(m) {
       msg.textContent = n ? `${n} entreprise${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''} autour de ce membre. Elles sont maintenant sur la carte (points bleus).`
         : 'Aucune entreprise trouvée dans ce rayon.';
       $('#show-candidates').checked = true;
-      state.map.flyTo(m.lat, m.lng, 15);
+      drawRadius();                                   // recadre sur le cercle de recherche
       await refreshCandidates();
     } catch (err) {
       console.error(err);
@@ -266,7 +279,7 @@ function selectMember(m) {
     btn.disabled = false;
   });
   openPanel();
-  state.map.flyTo(m.lat, m.lng, 14);
+  drawRadius();
 }
 
 // Équipe : envoie l'entreprise dans Odoo (fonction zc-opportunite de l'outil Zoning as Community, côté serveur).
@@ -676,6 +689,7 @@ function mountForm(lead) {
 
 $('#panel-close').addEventListener('click', () => {
   $('#panel').hidden = true;
+  clearRadius();
   cancelDraft();
   clearSelection();
   applyFilters();
@@ -1024,6 +1038,7 @@ async function start() {
   $('#zoning-import-btn').addEventListener('click', (e) => importZonings(e.currentTarget));
   $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
+  $('#cand-filter').addEventListener('change', () => refreshCandidates().catch(console.error));
   renderMarkers();
   refreshCandidates().catch(console.error);
   refreshZonings().catch(console.error);

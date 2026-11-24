@@ -4,7 +4,8 @@
 //   flyTo(lat, lng, zoom), fitBounds([[lat, lng], ...]), getZoom(), onZoom(cb),
 //   onMapClick(cb | null), geocode(adresse) -> { lat, lng, address } | null,
 //   getBounds() -> { minLat, maxLat, minLng, maxLng } | null, onMove(cb) (après un déplacement ou un zoom),
-//   setShapes([{ id, name, geometry (GeoJSON) }]) : remplace les contours dessinés (zonings)
+//   setShapes([{ id, name, geometry (GeoJSON) }]) : remplace les contours dessinés (zonings),
+//   setCircle({ lat, lng, radius (m) } | null) : cercle de recherche autour d'un point, cadré à l'écran
 
 const BRUSSELS = { lat: 50.85, lng: 4.36 };
 
@@ -80,6 +81,13 @@ async function createGoogleMap(el, { key, mapId }) {
       return { minLat: sw.lat(), maxLat: ne.lat(), minLng: sw.lng(), maxLng: ne.lng() };
     },
     onMove(cb) { map.addListener('idle', cb); },
+    setCircle(c) {
+      if (this._circle) { this._circle.setMap(null); this._circle = null; }
+      if (!c) return;
+      this._circle = new google.maps.Circle({ map, center: { lat: c.lat, lng: c.lng }, radius: c.radius, clickable: false,
+        strokeColor: '#FF8001', strokeWeight: 2, fillColor: '#FF8001', fillOpacity: 0.08 });
+      map.fitBounds(this._circle.getBounds(), 60);
+    },
     setShapes(shapes) {
       map.data.forEach((f) => map.data.remove(f));
       map.data.setStyle({ fillColor: '#2E5E8C', fillOpacity: 0.1, strokeColor: '#2E5E8C', strokeWeight: 1.2, clickable: false });
@@ -137,6 +145,12 @@ function createLeafletMap(el) {
       return { minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast() };
     },
     onMove(cb) { map.on('moveend', cb); },
+    setCircle(c) {
+      if (this._circle) { this._circle.remove(); this._circle = null; }
+      if (!c) return;
+      this._circle = L.circle([c.lat, c.lng], { radius: c.radius, color: '#FF8001', weight: 2, fillColor: '#FF8001', fillOpacity: 0.08, interactive: false }).addTo(map);
+      map.fitBounds(this._circle.getBounds(), { padding: [60, 60] });
+    },
     setShapes(shapes) {
       if (this._shapes) this._shapes.remove();
       this._shapes = shapes.length ? L.geoJSON({ type: 'FeatureCollection', features: shapes.map((s) => ({ type: 'Feature', properties: { name: s.name }, geometry: s.geometry })) },
