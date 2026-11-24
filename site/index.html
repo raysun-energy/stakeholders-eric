@@ -57,6 +57,14 @@
           </select>
         </label>
         <p class="muted small" id="cand-hint" hidden style="margin:8px 0 0"></p>
+        <form id="around-form" hidden style="margin-top:10px">
+          <label class="small" for="around-address">Équipe : chercher des entreprises autour d’une adresse</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <input id="around-address" type="search" autocomplete="off" placeholder="Rue, numéro, commune">
+            <button type="submit" class="btn secondary" style="padding:8px 12px;font-size:13px">Localiser</button>
+          </div>
+          <p class="error small" id="around-msg" style="margin:4px 0 0"></p>
+        </form>
         <div id="zoning-import" hidden style="margin-top:8px">
           <button type="button" class="btn secondary" id="zoning-import-btn" style="font-size:13px">Mettre à jour les zonings</button>
           <p class="muted small" id="zoning-import-msg" style="margin:6px 0 0;white-space:pre-line"></p>

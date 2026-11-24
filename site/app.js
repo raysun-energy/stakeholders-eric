@@ -153,10 +153,10 @@ async function exportCandidates(btn) {
       if (data.length < 1000) break;
     }
     const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const head = ['Nom', 'Adresse', 'Région', 'Activité', 'Conso min (MWh/an)', 'Conso max (MWh/an)', 'Toiture (m²)', 'Potentiel solaire (MWh/an)', 'Latitude', 'Longitude'];
+    const head = ['Nom', 'Adresse', 'Région', 'Activité', 'Conso min (MWh/an)', 'Conso max (MWh/an)', 'Toiture (m²)', 'Potentiel solaire (MWh/an)', 'Téléphone', 'E-mail', 'Site web', 'Latitude', 'Longitude'];
     const lines = rows.map((c) => [c.nom, c.adresse, c.region, CAND_CATEGORIES[c.categorie] || c.categorie,
       c.conso_min_kwh != null ? Math.round(c.conso_min_kwh / 1000) : '', c.conso_max_kwh != null ? Math.round(c.conso_max_kwh / 1000) : '',
-      c.surface_toit_m2, c.pv_max_kwh_an != null ? Math.round(c.pv_max_kwh_an / 1000) : '', c.lat, c.lng].map(cell).join(';'));
+      c.surface_toit_m2, c.pv_max_kwh_an != null ? Math.round(c.pv_max_kwh_an / 1000) : '', c.telephone, c.email, c.site_web, c.lat, c.lng].map(cell).join(';'));
     const blob = new Blob(['\ufeff' + [head.map(cell).join(';'), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -238,12 +238,12 @@ function selectMember(m) {
   clearSelection();
   $('#panel-body').innerHTML = `
     <div class="panel-head">
-      <span class="tag" style="background:#E3F2E9;color:#1E7F4E">Membre</span>
+      <span class="tag" style="background:${m.kind === 'adresse' ? '#FBEBDB;color:#9A5415' : '#E3F2E9;color:#1E7F4E'}">${m.kind === 'adresse' ? 'Adresse' : 'Membre'}</span>
       <h2>${esc(m.name || 'Membre')}</h2>
       <p class="muted">${esc(m.operation)}</p>
     </div>
-    <div class="admin-actions"><strong>Équipe : chercher des entreprises autour de ce membre</strong>
-      <p class="muted small" style="margin:4px 0 8px">Cherche dans la BCE les entreprises de la même Région dans le rayon choisi, estime leur consommation et analyse les toitures des plus prometteuses. Compter 10 à 30 secondes, et quelques centimes d’API Google par recherche.</p>
+    <div class="admin-actions"><strong>Équipe : chercher des entreprises autour de ${m.kind === 'adresse' ? 'cette adresse' : 'ce membre'}</strong>
+      <p class="muted small" style="margin:4px 0 8px">Cherche dans la BCE les entreprises ${m.kind === 'adresse' ? '' : 'de la même Région '}dans le rayon choisi, estime leur consommation et analyse les toitures des plus prometteuses. Compter 10 à 30 secondes, et quelques centimes d’API Google par recherche.</p>
       <label class="small">Rayon
         <select id="member-radius" style="margin-top:4px"><option value="500">500 m</option><option value="1000" selected>1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select>
       </label>
@@ -267,7 +267,7 @@ function selectMember(m) {
       if (!res.ok || !j.ok) throw new Error(j.error || `Erreur ${res.status}`);
       const n = (j.candidats || []).length;
       msg.className = 'small';
-      msg.textContent = n ? `${n} entreprise${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''} autour de ce membre. Elles sont maintenant sur la carte (points bleus).`
+      msg.textContent = n ? `${n} entreprise${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''} dans ce rayon. Elles sont maintenant sur la carte (points bleus).`
         : 'Aucune entreprise trouvée dans ce rayon.';
       $('#show-candidates').checked = true;
       drawRadius();                                   // recadre sur le cercle de recherche
@@ -317,6 +317,7 @@ function selectCandidate(id) {
   state.candSelected = id;
   state.candMarkers.get(id)?.setHtml(candHtml(true));
   const row = (k, v) => (v ? `<div class="kv"><dt>${k}</dt><dd>${v}</dd></div>` : '');
+  const site = c.site_web ? (/^https?:\/\//i.test(c.site_web) ? c.site_web : `https://${c.site_web}`) : '';
   const conso = c.conso_max_kwh ? `${c.conso_min_kwh ? mwh(c.conso_min_kwh) + ' à ' : 'jusqu’à '}${mwh(c.conso_max_kwh)} MWh/an` : '';
   $('#panel-body').innerHTML = `
     <div class="panel-head">
@@ -329,7 +330,11 @@ function selectCandidate(id) {
       ${row('Consommation estimée', esc(conso))}
       ${row('Toiture', c.surface_toit_m2 ? `${Number(c.surface_toit_m2).toLocaleString('fr-BE')} m²` : '')}
       ${row('Potentiel solaire', c.pv_max_kwh_an ? `${mwh(c.pv_max_kwh_an)} MWh/an` : '')}
+      ${row('Téléphone', c.telephone ? `<a href="tel:${esc(c.telephone.replace(/[^+\d]/g, ''))}">${esc(c.telephone)}</a>` : '')}
+      ${row('E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '')}
+      ${row('Site web', site ? `<a href="${esc(site)}" target="_blank" rel="noopener">${esc(site.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>` : '')}
     </dl>
+    ${c.telephone || c.email || site ? '' : '<p class="muted small">Pas de téléphone ni d’e-mail connus pour cette entreprise.</p>'}
     <p class="muted small">Estimations automatiques d’après l’activité et la toiture : des ordres de grandeur, pas des mesures.</p>
     <div class="pitch"><strong>Vous connaissez cette entreprise ?</strong><br>Une introduction ou un simple nom de contact nous aide à ouvrir la porte.</div>
     <button type="button" class="btn primary" id="cand-propose" style="margin-top:12px">Je connais quelqu’un ici</button>
@@ -1035,6 +1040,17 @@ async function start() {
   map.onMove(() => { refreshCandidates().catch(console.error); refreshZonings().catch(console.error); });
   $('#show-zonings').addEventListener('change', () => refreshZonings().catch(console.error));
   $('#zoning-import').hidden = state.user.role !== 'admin';
+  // Équipe : recherche autour d'une adresse (localisée par Google, ou OpenStreetMap en secours).
+  $('#around-form').hidden = state.user.role !== 'admin';
+  $('#around-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('#around-msg'), q = $('#around-address').value.trim();
+    msg.textContent = '';
+    if (!q) return;
+    const hit = await state.map.geocode(q).catch(() => null);
+    if (!hit) { msg.textContent = 'Adresse introuvable. Précisez la commune ou le code postal.'; return; }
+    selectMember({ kind: 'adresse', name: (hit.address || q).replace(/, Belgi(que|ë|um)$/i, ''), operation: 'Point de recherche', lat: hit.lat, lng: hit.lng, id: null });
+  });
   $('#zoning-import-btn').addEventListener('click', (e) => importZonings(e.currentTarget));
   $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
