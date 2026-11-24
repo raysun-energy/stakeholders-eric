@@ -306,7 +306,7 @@ function candCardHtml(c) {
     <div class="cand-actions">
       ${callTo ? `<a class="btn secondary" href="tel:${esc(callTo.replace(/[^+\d]/g, ''))}">Appeler</a>` : ''}
       ${mailTo ? `<a class="btn secondary" href="mailto:${esc(mailTo)}">E-mail</a>` : ''}
-      <button type="button" class="btn primary" data-odoo>Créer la fiche Odoo</button>
+      <button type="button" class="btn primary" data-odoo>${state.user.role === 'apporteur' ? 'Créer la fiche Odoo + ajouter à mes dossiers' : 'Créer la fiche Odoo'}</button>
       <button type="button" class="btn secondary" data-know>Je connais quelqu’un ici</button>
     </div>
     ${team ? `<details class="cand-contact"><summary>Équipe : personne de contact</summary>
@@ -361,7 +361,7 @@ function renderCandList() {
 // Équipe : la fiche est à son nom. Apporteur : elle entre dans les dossiers de sa société. Ambassadeur : l'équipe la voit dans son suivi.
 async function createOdooFiche(c, card, btn) {
   const msg = $('[data-msg]', card);
-  if (!confirm(`Créer la fiche de « ${c.nom} » dans Odoo ?`)) return;
+  if (!confirm(`Créer la fiche de « ${c.nom} » dans Odoo${state.user.role === 'apporteur' ? ' et l’ajouter à vos dossiers' : ''} ?`)) return;
   btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Création de la fiche dans Odoo…';
   try {
     const j = await zcCall(ZC_ODOO_URL, { place_id: c.id });
@@ -372,7 +372,7 @@ async function createOdooFiche(c, card, btn) {
     } else if (role === 'apporteur') {
       const { error } = await sb.rpc('amb_candidate_to_dossier', { p_place_id: c.id });
       if (error) throw new Error(/déjà confié/.test(error.message) ? 'cette entreprise est déjà suivie par un autre apporteur' : 'la fiche est créée dans Odoo, mais le dossier n’a pas pu être ajouté. Prévenez l’équipe RaYSun');
-      msg.innerHTML = 'Fiche créée dans Odoo. Elle est dans <a href="dossiers.html">vos dossiers</a>.';
+      msg.innerHTML = 'Fiche créée dans Odoo et ajoutée à <a href="dossiers.html">vos dossiers</a>.';
     } else {
       msg.textContent = 'Fiche créée dans Odoo. L’équipe RaYSun la retrouve dans son suivi et reviendra vers vous.';
     }
