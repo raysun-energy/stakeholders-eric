@@ -79,6 +79,10 @@
     th { background: var(--bg); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     tr.total td { font-weight: 700; background: var(--bg); }
+    .dossier-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .dossier.folded { cursor: pointer; gap: 6px; } .dossier.folded:hover { border-color: var(--accent); }
+    .cards.foldable { align-items: start; }
+    #fold-all, .dossier .fold { color: var(--accent); text-decoration: underline; font-size: 13px; }
     tr.grp { cursor: pointer; } tr.grp td { font-weight: 700; background: var(--bg); }
     tr.grp-q td:first-child { padding-left: 26px; } tr.grp-q td { font-weight: 600; background: transparent; }
     tr.grp small { display: inline; font-weight: 400; color: var(--muted); margin-left: 6px; } tr.grp .chev { display: inline-block; width: 14px; color: var(--accent); }
@@ -180,7 +184,7 @@
         </table></div>
       </div>
 
-      <h2 id="dossiers-title">Vos dossiers</h2>
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><h2 id="dossiers-title">Vos dossiers</h2><button type="button" class="link" id="fold-all" hidden>Tout déplier</button></div>
       <p class="lead-in" id="dossiers-intro">Les dossiers que RaYSun vous confie. Confirmez chaque dossier pour nous dire que vous le prenez en charge.</p>
       <div class="cards" id="dossiers"></div>
 

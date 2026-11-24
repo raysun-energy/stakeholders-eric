@@ -9,7 +9,7 @@ const dateFr = (d) => d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocal
 const periodLabel = (p) => p.includes('-T') ? `${p.slice(6)}${p.slice(6) === '1' ? 'er' : 'e'} trimestre ${p.slice(0, 4)}` : `Année ${p}`;
 const quarterOf = (d) => `${d.slice(0, 4)}-T${Math.floor((Number(d.slice(5, 7)) - 1) / 3) + 1}`;
 
-const state = { admin: false, org: null, orgs: [], stats: [], kind: 'trimestre', period: null, dossiers: [], invoices: [], messages: [], open: new Set() };
+const state = { admin: false, org: null, orgs: [], stats: [], kind: 'trimestre', period: null, dossiers: [], invoices: [], messages: [], open: new Set(), unfolded: new Set() };
 
 function fail(e, msg = 'Une erreur est survenue. Rechargez la page.') {
   console.error(e);
@@ -111,8 +111,13 @@ function renderDossiers() {
   const orgName = (id) => state.orgs.find((o) => o.id === id)?.name ?? '';
   $('#dossiers-title').textContent = state.admin ? (state.org ? `Dossiers de ${orgName(state.org)}` : 'Tous les dossiers') : 'Vos dossiers';
   $('#dossiers-intro').hidden = state.admin;
-  if (!state.dossiers.length) { $('#dossiers').innerHTML = '<p class="muted">Aucun dossier pour le moment.</p>'; return; }
+  if (!state.dossiers.length) { $('#fold-all').hidden = true; $('#dossiers').innerHTML = '<p class="muted">Aucun dossier pour le moment.</p>'; return; }
   const kv = (k, v) => v ? `<div class="kv"><dt>${k}</dt><dd>${v}</dd></div>` : '';
+  const foldable = state.dossiers.length >= 6;
+  const allOpen = foldable && state.dossiers.every((d) => state.unfolded.has(d.id));
+  $('#fold-all').hidden = !foldable;
+  $('#fold-all').textContent = allOpen ? 'Tout replier' : 'Tout déplier';
+  $('#dossiers').classList.toggle('foldable', foldable);
   $('#dossiers').innerHTML = state.dossiers.map((d) => {
     const dispo = [dateFr(d.available_on), d.available_note].filter(Boolean).map(esc).join(' · ');
     const contact = [d.contact_name, d.contact_function].filter(Boolean).map(esc).join(', ');
@@ -135,11 +140,14 @@ function renderDossiers() {
         <button class="link danger" data-delete>Supprimer</button></div>
         ${d.odoo_lead_id ? `<p class="meta"><a href="https://raysun.odoo.com/odoo/crm/${Number(d.odoo_lead_id)}" target="_blank" rel="noopener">Fiche Odoo</a></p>` : ''}
         <p class="meta">${d.notified_at ? `E-mail envoyé le ${esc(dateFr(d.notified_at))}` : 'E-mail pas encore envoyé'}</p>` : '';
-    return `<article class="dossier" data-id="${esc(d.id)}">
-      <div><span class="st st-${esc(d.status.split(' ')[0])}">${esc(d.status)}</span></div>
+    // À partir de 6 dossiers, chaque fiche se plie : seuls le statut, le nom et la ligne de repère restent visibles.
+    const folded = foldable && !state.unfolded.has(d.id);
+    return `<article class="dossier${folded ? ' folded' : ''}" data-id="${esc(d.id)}">
+      <div class="dossier-top"><span class="st st-${esc(d.status.split(' ')[0])}">${esc(d.status)}</span>
+        ${foldable ? `<button type="button" class="link fold" data-fold aria-expanded="${!folded}">${folded ? 'Déplier' : 'Replier'}</button>` : ''}</div>
       <h3>${esc(d.prospect)}</h3>
       <p class="meta">${[state.admin && !state.org ? esc(orgName(d.org_id)) : '', esc(d.region), `reçu le ${esc(dateFr(d.created_at))}`].filter(Boolean).join(' · ')}</p>
-      <dl>
+      ${folded ? '</article>' : `<dl>
         ${kv('Adresse', d.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.address)}" target="_blank" rel="noopener">${esc(d.address)}</a>` : '')}
         ${kv('Projet', esc(d.project))}
         ${kv('Contact', contact)}
@@ -150,7 +158,7 @@ function renderDossiers() {
       ${d.message ? `<p class="msg"><b>Message de RaYSun</b>${esc(d.message)}</p>` : ''}
       ${answered}${actions}${admin}
       ${fil(d)}
-    </article>`;
+    </article>`}`;
   }).join('');
 }
 
@@ -161,6 +169,9 @@ $('#dossiers').addEventListener('click', async (e) => {
     if (btn.dataset.answer) {
       btn.disabled = true;
       must(await sb.rpc('amb_dossier_answer', { p_id: id, p_status: btn.dataset.answer, p_note: $('textarea', card)?.value || null }));
+    } else if ('fold' in btn.dataset) {
+      state.unfolded.has(id) ? state.unfolded.delete(id) : state.unfolded.add(id);
+      renderDossiers(); return;
     } else if ('edit' in btn.dataset) {
       startEdit(state.dossiers.find((d) => d.id === id)); return;
     } else if ('resend' in btn.dataset) {
@@ -173,6 +184,17 @@ $('#dossiers').addEventListener('click', async (e) => {
     } else return;
     await loadSpace();
   } catch (err) { btn.disabled = false; fail(err, 'Action impossible pour le moment.'); }
+});
+
+$('#fold-all').addEventListener('click', () => {
+  const allOpen = state.dossiers.every((d) => state.unfolded.has(d.id));
+  state.unfolded = allOpen ? new Set() : new Set(state.dossiers.map((d) => d.id));
+  renderDossiers();
+});
+// Un clic sur le nom d'une fiche pliée la déplie aussi.
+$('#dossiers').addEventListener('click', (e) => {
+  const card = e.target.closest('.dossier.folded');
+  if (card && !e.target.closest('button, a')) { state.unfolded.add(card.dataset.id); renderDossiers(); }
 });
 
 $('#dossiers').addEventListener('toggle', (e) => {
