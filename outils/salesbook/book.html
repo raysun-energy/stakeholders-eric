@@ -1,0 +1,413 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Sales book apporteurs d'affaires RaYSun</title>
+<style>
+@page { size: 960px 540px; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: Carlito, Calibri, sans-serif; color: #1B1C19; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+:root { --or: #D98C0F; --bleu: #3D6FA8; --noir: #12130F; --creme: #FAF6EC; --gris: #6A6A64; --trait: #E6DFCF; }
+.s { width: 960px; height: 540px; position: relative; overflow: hidden; page-break-after: always; padding: 34px 44px 40px; background: #fff; }
+.s.c { background: var(--creme); }
+.tag { display: inline-block; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--or); border: 1px solid var(--or); border-radius: 99px; padding: 2px 10px; }
+.tag.b { color: var(--bleu); border-color: var(--bleu); }
+h1 { font-size: 27px; line-height: 1.12; margin: 8px 0 14px; font-weight: 700; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: var(--or); }
+h3 { font-size: 15px; margin: 0 0 4px; }
+p, li { font-size: 13.5px; line-height: 1.4; margin: 0 0 6px; }
+ul { margin: 0; padding-left: 16px; } li::marker { color: var(--or); }
+.small { font-size: 11.5px; color: var(--gris); }
+.foot { position: absolute; left: 44px; right: 44px; bottom: 14px; display: flex; justify-content: space-between; font-size: 10px; color: var(--gris); }
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+.card { background: #fff; border: 1px solid var(--trait); border-radius: 12px; padding: 12px 14px; }
+.s:not(.c) .card { background: var(--creme); }
+.card.o { border-color: var(--or); border-width: 1.5px; }
+.card.b { border-color: var(--bleu); border-width: 1.5px; }
+.num { font-size: 13px; font-weight: 700; color: var(--or); letter-spacing: .04em; }
+.num.b { color: var(--bleu); }
+.kpi b { display: block; font-size: 30px; line-height: 1; color: var(--or); } .kpi span { font-size: 12px; color: var(--gris); }
+table { border-collapse: collapse; width: 100%; } th, td { text-align: left; font-size: 12.5px; padding: 5px 8px; border-bottom: 1px solid var(--trait); vertical-align: top; line-height: 1.35; }
+th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--gris); }
+.split { display: grid; grid-template-columns: 330px 1fr; gap: 22px; align-items: start; }
+.split.w { grid-template-columns: 290px 1fr; }
+.shot { border: 1px solid var(--trait); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(18,19,15,.12); background: #fff; }
+.shot img { display: block; width: 100%; }
+.legend { font-size: 10.5px; color: var(--gris); margin-top: 5px; }
+.step { display: grid; grid-template-columns: 26px 1fr; gap: 8px; margin-bottom: 9px; }
+.step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--bleu); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.step p { margin: 0; }
+.pill { display: inline-block; background: var(--noir); color: #fff; border-radius: 99px; padding: 7px 16px 7px 10px; font-size: 13px; font-weight: 700; }
+.pill::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--or); margin-right: 8px; }
+.big h1 { font-size: 30px; margin-bottom: 18px; } .big p, .big li { font-size: 15.5px; } .big h3 { font-size: 17px; margin-bottom: 6px; } .big .small { font-size: 13px; }
+.big .card { padding: 15px 17px; } .big th, .big td { font-size: 14.5px; padding: 9px 10px; } .big .grid { gap: 16px; } .big .kpi b { font-size: 38px; } .big .kpi span { font-size: 13.5px; } .big .num { font-size: 14px; }
+.big .step p { font-size: 15.5px; } .big .step { margin-bottom: 12px; }
+/* couverture et intercalaires */
+.dark { background: var(--noir); color: #fff; padding: 0; }
+.dark .circle { position: absolute; right: -120px; top: -90px; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #F5A623, #D98C0F 70%); }
+.dark .in { position: absolute; left: 54px; top: 0; bottom: 0; width: 560px; display: flex; flex-direction: column; justify-content: center; }
+.dark h1 { font-size: 44px; color: #fff; margin: 18px 0 12px; } .dark p { font-size: 16px; color: #D9D5CB; }
+.dark .logo { width: 150px; }
+.dark .meta { position: absolute; left: 54px; bottom: 26px; font-size: 11.5px; color: #A9A69C; }
+.part .circle { right: auto; left: -160px; top: 60px; width: 420px; height: 420px; }
+.part .in { left: 330px; }
+.part .n { font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: #F5A623; font-weight: 700; }
+.ph { border-radius: 12px; overflow: hidden; position: relative; } .ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.credit { font-size: 8.5px; color: var(--gris); margin-top: 3px; }
+.logo-card { background: #fff; border: 1px solid var(--trait); border-radius: 10px; height: 54px; display: grid; place-items: center; } .logo-card img { max-height: 34px; max-width: 150px; }
+.region { border: 1.5px dashed var(--or); border-radius: 14px; padding: 12px; background: #fff; }
+.bars { display: flex; align-items: flex-end; gap: 22px; height: 150px; padding: 0 10px; border-bottom: 2px solid var(--noir); }
+.bars div { flex: 1; background: var(--or); border-radius: 6px 6px 0 0; position: relative; } .bars b { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-size: 14px; }
+.barl { display: flex; gap: 22px; padding: 4px 10px 0; } .barl span { flex: 1; text-align: center; font-size: 12.5px; font-weight: 700; }
+.bigk { border-left: 4px solid var(--or); padding-left: 12px; margin-bottom: 14px; } .bigk b { display: block; font-size: 30px; line-height: 1.05; } .bigk span { font-size: 13px; color: var(--gris); }
+.quote { background: var(--creme); border-left: 4px solid var(--bleu); border-radius: 0 10px 10px 0; padding: 9px 12px; font-size: 13.5px; line-height: 1.4; margin-bottom: 8px; }
+.tl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; } .tl .shot { height: 190px; } .tl .shot img { width: 100%; }
+.big table.serre td { padding: 6px 10px; font-size: 14px; } .big table.serre th { padding: 4px 10px; }
+.live { margin: 4px 0 0; text-align: center; font-size: 12px; color: var(--bleu); font-weight: 700; }
+</style></head><body>
+
+<section class="s dark"><div class="circle"></div><div class="in">
+  <img class="logo" src="logo-blanc.svg" alt="RaYSun">
+  <h1>Sales book<br>apporteurs d'affaires</h1>
+  <p>RaYSun et ses services, puis le mode d'emploi de la plateforme apporteurs, écran par écran.</p>
+</div><div class="meta">Version 4 du 24/11/2026 · Version bêta de la plateforme · Document réservé aux apporteurs d'affaires de RaYSun</div></section>
+
+<section class="s c big"><span class="tag">Sommaire</span><h1>Deux parties, <em>un seul objectif</em> : vous rendre autonome</h1>
+<div class="grid g2" style="margin-top:6px">
+  <div class="card o"><div class="num">PARTIE 1</div><h3 style="font-size:18px;margin:4px 0 8px">RaYSun et ses services</h3>
+    <ul><li>Qui est RaYSun</li><li>Communauté d'énergie et opération de partage</li><li>Energilia et les trois voies d'entrée</li><li>Ce que gagne le client</li><li>Qui cibler, quoi dire, quoi éviter</li><li>Le parcours d'un dossier et votre rôle</li><li>Répondre aux objections</li></ul></div>
+  <div class="card b"><div class="num b">PARTIE 2</div><h3 style="font-size:18px;margin:4px 0 8px">La plateforme apporteurs</h3>
+    <ul><li>Accès et deux espaces : la carte et vos dossiers</li><li>La règle d'or : enregistrer avant de contacter</li><li>Chercher des entreprises autour d'un point</li><li>Créer la fiche et l'ajouter à vos dossiers</li><li>Proposer un lieu</li><li>Suivre vos dossiers et discuter avec RaYSun</li><li>Commissions, classement et support</li></ul></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s dark part"><div class="circle"></div><div class="in"><div class="n">Partie 1</div><h1>RaYSun<br>et ses services</h1><p>Ce qu'il faut savoir pour présenter l'offre en deux minutes et ouvrir une porte.</p></div></section>
+
+<section class="s big"><span class="tag">Qui est RaYSun</span><h1>Bureau d'études et <em>gestionnaire de communautés d'énergie</em></h1>
+<div class="split" style="grid-template-columns:1fr 1fr">
+  <div><p>RaYSun conçoit, monte et gère des communautés d'énergie et des opérations de partage d'énergie pour des entreprises, des industries, des communes et des copropriétés, dans les trois Régions belges.</p>
+    <div class="card" style="margin-top:6px;padding:10px 15px"><h3>Deux métiers</h3><ul><li><b>Études et conseil</b> : études de communautés d'énergie, simulations au quart d'heure, conseil technique et juridique.</li><li><b>Mise en place et gestion</b> : autorisations, contrats, facturation, entrées et sorties de membres, relations avec les gestionnaires de réseau, les régulateurs et les fournisseurs.</li></ul></div>
+    <p style="margin-top:8px;font-size:14.5px"><b>La promesse :</b> réduire la facture d'électricité tout en consommant une électricité verte, produite localement, à un prix stable dans le temps.</p></div>
+  <div class="grid g2">
+    <div class="card kpi" style="padding:10px 14px"><b>15</b><span>opérations de partage présentées sur raysun.solar</span></div>
+    <div class="card kpi" style="padding:10px 14px"><b>16,5 GWh</b><span>d'énergie partagée par an sur ces 15 réalisations</span></div>
+    <div class="card kpi" style="padding:10px 14px"><b>334</b><span>points de fourniture dans 102 communes</span></div>
+    <div class="card kpi" style="padding:10px 14px"><b>26 %</b><span>de réduction moyenne sur la facture</span></div>
+    <div style="grid-column:1/-1"><div class="ph" style="height:78px"><img src="storm/i-002.png"></div><div class="credit">Chiffres : page « Nos réalisations » de raysun.solar, septembre 2026. Photo : DomainHertogh, Wikimedia Commons, CC BY 4.0.</div></div>
+  </div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag">Comprendre en 30 secondes</span><h1>Qu'est-ce qu'une <em>communauté d'énergie</em> ?</h1>
+<div class="split" style="grid-template-columns:270px 1fr">
+  <div><p style="font-size:15px">Des producteurs vendent leur surplus à des consommateurs voisins, par le réseau existant.</p>
+    <div class="card o" style="margin-top:10px"><div class="num">01</div><h3>Le producteur</h3><p style="margin:0">Surplus vendu 60 à 70 €/MWh, contre 20 à 45.</p></div>
+    <div class="card" style="margin-top:10px"><div class="num">02</div><h3>Le consommateur</h3><p style="margin:0">Prix stable, 26 % de moins en moyenne.</p></div>
+    <div class="card" style="margin-top:10px"><div class="num">03</div><h3>Aucun investissement</h3><p style="margin:0">Même fournisseur, même compteur.</p></div></div>
+  <div><img src="storm/i-009.png" style="width:100%;display:block"><div class="credit">Schéma de la présentation commerciale RaYSun.</div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag">Les communautés</span><h1>Une communauté par Région, <em>gérée par RaYSun</em></h1>
+<p style="font-size:14.5px">Chaque communauté héberge plusieurs opérations de partage, indépendantes entre elles.</p>
+<div class="grid g3" style="margin-top:12px">
+  <div class="region"><div class="logo-card"><img src="storm/citywatt.png" alt="CityWatt"></div>
+    <div class="card o" style="margin-top:10px;display:flex;gap:10px;align-items:center"><img src="storm/energilia.png" style="height:44px"><div><h3 style="margin:0">Energilia Brussels</h3><span class="small">l'opération ouverte</span></div></div>
+    <p style="margin:10px 0 0;text-align:center"><b>Bruxelles</b> · 72 membres · 2 788 MWh/an</p><p class="live" data-live-region="Bruxelles">Échangé de janvier à septembre 2026 : 2 752 MWh</p></div>
+  <div class="region"><div class="logo-card"><img src="storm/wallowatt.png" alt="WalloWatt"></div>
+    <div class="card o" style="margin-top:10px;display:flex;gap:10px;align-items:center"><img src="storm/energilia.png" style="height:44px"><div><h3 style="margin:0">Energilia Wallonie</h3><span class="small">l'opération ouverte</span></div></div>
+    <p style="margin:10px 0 0;text-align:center"><b>Wallonie</b> · 106 membres · 11 249 MWh/an</p><p class="live" data-live-region="Wallonie">Échangé de janvier à septembre 2026 : 951 MWh</p></div>
+  <div class="region"><div class="logo-card"><img src="storm/samenwatt.png" alt="SamenWatt"></div>
+    <div class="card" style="margin-top:10px;height:66px;display:flex;align-items:center"><div><h3 style="margin:0">3 opérations dédiées</h3><span class="small">Facq Vlaanderen, Wanele, FICO Energy</span></div></div>
+    <p style="margin:10px 0 0;text-align:center"><b>Flandre</b> · 45 membres · 2 512 MWh/an</p><p class="live" data-live-region="Flandre">Échangé de janvier à septembre 2026 : 1 300 MWh</p></div>
+</div>
+<p class="small" style="margin-top:10px;text-align:center">MWh/an : volumes annuels des réalisations présentées sur raysun.solar, opérations en cours de validation comprises. Échangé : volumes mesurés par les gestionnaires de réseau. Un compteur n'appartient qu'à une seule opération.</p><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c big"><span class="tag">Le principe</span><h1>Communauté d'énergie et <em>opération de partage</em> : deux choses différentes</h1>
+<div class="grid g3">
+  <div class="card"><div class="num">01</div><h3>La communauté d'énergie</h3><p>Une entité juridique, le plus souvent une ASBL. RaYSun en est le gestionnaire, les membres gardent la décision.</p><p class="small">CityWatt à Bruxelles, WalloWatt en Wallonie, SamenWatt en Flandre.</p></div>
+  <div class="card"><div class="num">02</div><h3>L'opération de partage</h3><p>Un groupe de producteurs et de consommateurs, logé dans une communauté, qui échangent réellement l'énergie selon une clé de répartition.</p><p class="small">Une communauté peut héberger plusieurs opérations, sans lien entre elles.</p></div>
+  <div class="card o"><div class="num">03</div><h3>Energilia</h3><p>La marque des opérations de partage ouvertes à tous : <b>Energilia Brussels</b> (dans CityWatt) et <b>Energilia Wallonie</b> (dans WalloWatt).</p><p class="small">On dit « opération de partage d'énergie », pas « communauté ».</p></div>
+</div>
+<div class="card b" style="margin-top:14px"><p style="margin:0"><b>La règle à retenir :</b> un compteur (code EAN) n'appartient qu'à une seule opération de partage à la fois, à l'injection comme au prélèvement. Le client garde son fournisseur pour le complément, et son compteur. Seul prérequis technique : un compteur communicant.</p></div>
+<div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s big"><span class="tag">La valeur pour le client</span><h1>Ce que gagne le client, <em>sans investir</em></h1>
+<div class="grid g2">
+  <div class="card o"><h3>Le consommateur</h3><ul><li>Une réduction moyenne de 26 % sur la facture.</li><li>Un prix stable dans le temps.</li><li>Une électricité locale et renouvelable.</li><li>Une attestation annuelle, utile pour le reporting RSE.</li></ul></div>
+  <div class="card b"><h3>Le producteur</h3><ul><li>Son surplus vendu 60 à 70 €/MWh, au lieu de 20 à 45 €/MWh au fournisseur.</li><li>Une entreprise déjà équipée de panneaux n'est pas un prospect perdu : c'est un producteur potentiel.</li><li>Un prosumer signe les deux contrats : achat et vente.</li></ul></div>
+</div>
+<div class="grid g4" style="margin-top:14px">
+  <div class="card"><h3>Pas d'investissement</h3><p class="small">Ni travaux, ni structure juridique à créer.</p></div>
+  <div class="card"><h3>Pas de changement de fournisseur</h3><p class="small">Il reste pour le complément.</p></div>
+  <div class="card"><h3>Pas de frais d'entrée</h3><p class="small">Ni abonnement fixe, ni minimum, ni indemnité de sortie.</p></div>
+  <div class="card"><h3>RaYSun s'occupe de tout</h3><p class="small">Administratif, juridique, régulateur, suivi, facturation.</p></div>
+</div>
+<p class="small" style="margin-top:10px">Chaque membre suit ses volumes partagés et ses factures sur la plateforme My Community. Arguments validés par RaYSun ; ne pas promettre d'autre chiffre.</p>
+<div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag">Exemples</span><h1>Trois exemples <em>pour expliquer le gain</em></h1>
+<div class="grid g3">
+  <div class="card o"><div class="num">EXEMPLE 1 · LE CONSOMMATEUR</div><h3 style="margin-top:4px">Comment se lit la facture</h3>
+    <p>Une entreprise consomme <b>100 MWh</b> par an, dont <b>30 MWh</b> viennent du partage.</p>
+    <ul><li>70 MWh restent facturés par son fournisseur.</li><li>30 MWh sont facturés par la communauté, à un prix stable.</li></ul>
+    <p class="small" style="margin-top:6px">Exemple pédagogique : la part partagée dépend du profil de chaque site.</p></div>
+  <div class="card b"><div class="num b">EXEMPLE 2 · LE PRODUCTEUR</div><h3 style="margin-top:4px">Un surplus mieux valorisé</h3>
+    <p>Un site injecte <b>3 GWh</b> par an sur le réseau.</p>
+    <ul><li>Environ deux tiers sont valorisés dans le partage : 2 GWh.</li><li>Jusqu'à 65 €/MWh, contre environ 25 €/MWh au fournisseur.</li><li>Soit un gain d'environ <b>80 000 € par an</b>.</li></ul>
+    <p class="small" style="margin-top:6px">Ordre de grandeur donné à un prospect ; la simulation fixe le chiffre réel.</p></div>
+  <div class="card"><div class="num">EXEMPLE 3 · UN ZONING</div><h3 style="margin-top:4px">Zoning de Hannut, 8 entreprises</h3>
+    <p>Résultats mesurés sur les compteurs :</p>
+    <ul><li>De juin à août 2026 : <b>33,4 %</b> de la consommation couverte par le partage.</li><li>De mars à août 2026 : un gain de <b>2 228 €</b>, soit 89 € par MWh partagé.</li></ul>
+    <p class="small" style="margin-top:6px">Des petites entreprises voisines suffisent pour démarrer.</p></div>
+</div>
+<div class="card" style="margin-top:14px"><p style="margin:0"><b>À retenir pour vos rendez-vous :</b> ces exemples servent à expliquer le mécanisme. N'annoncez jamais un gain à un prospect avant sa simulation : demandez sa facture.</p></div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c big"><span class="tag">Les offres</span><h1>Trois voies d'entrée, <em>de la plus légère à la plus complète</em></h1>
+<table class="serre"><tr><th style="width:27%">Voie</th><th>Ce que fait le client</th><th style="width:26%">Délai indicatif</th></tr>
+<tr><td><b>1. Rejoindre Energilia</b><br><span class="small">« Rejoindre, c'est signer, pas fonder. »</span></td><td>Il signe un contrat d'achat ou de vente d'électricité locale (les deux s'il est prosumer). Rien à créer. Rejoindre Energilia est gratuit. C'est le cas le plus courant pour un apporteur.</td><td>Quelques jours à Bruxelles ; environ 4 mois en Wallonie ; un mois au maximum en Flandre</td></tr>
+<tr><td><b>2. Une opération dédiée</b><br><span class="small">dans CityWatt, WalloWatt ou SamenWatt</span></td><td>Une opération réservée à ses sites, à son zoning ou à sa commune.</td><td>Environ 4 mois en Wallonie ; un mois au maximum en Flandre</td></tr>
+<tr><td><b>3. Sa propre communauté</b></td><td>Une nouvelle entité juridique, ses statuts, son agrément, et une première opération. Voies 2 et 3 : chiffrage au cas par cas par RaYSun.</td><td>8 à 10 mois en Wallonie ; un mois au maximum en Flandre</td></tr></table>
+<div class="grid g3" style="margin-top:8px">
+  <div class="card" style="padding:9px 14px"><h3>Multi-sites</h3><p class="small">Une entreprise partage sa production entre ses sites. Exemple : Brasserie du Bocq.</p></div>
+  <div class="card" style="padding:9px 14px"><h3>Un territoire</h3><p class="small">Entreprises et communes d'un même territoire. Exemples : Hannut, Rixensart, Auderghem.</p></div>
+  <div class="card" style="padding:9px 14px"><h3>Propriétaire et locataires</h3><p class="small">Un toit sans consommation alimente les locataires. Exemples : BuzzyPark, Fico.</p></div>
+</div>
+
+<div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag">Grille tarifaire · Energilia</span><h1>Les prix d'Energilia, <em>identiques dans les trois Régions</em></h1>
+<div class="grid g3" style="gap:12px">
+  <div class="card o" style="padding:10px 14px"><div class="num">LE CONSOMMATEUR</div>
+    <div style="margin-top:4px"><b style="font-size:38px;color:var(--or);line-height:1">97 €</b></div><p style="margin:2px 0 6px">par MWh partagé, hors TVA</p>
+    <ul><li>Même prix à Bruxelles, en Wallonie et en Flandre, quel que soit le volume.</li><li>ASBL, ONG et B Corp, sur présentation de dossier : 90 €/MWh.</li><li>Aucun frais de mise en place pour rejoindre Energilia.</li></ul></div>
+  <div class="card b" style="padding:10px 14px"><div class="num b">LE PRODUCTEUR · PRIX D'ACHAT</div>
+    <table style="margin-top:4px"><tr><th>Formule</th><th style="text-align:right">Brut (€/MWh)</th></tr>
+    <tr><td>Offre variable</td><td style="text-align:right">60,00</td></tr><tr><td>Prix fixe 1 an</td><td style="text-align:right">62,50</td></tr><tr><td>Prix fixe 3 ans</td><td style="text-align:right">65,00</td></tr><tr><td>Prix fixe 5 ans</td><td style="text-align:right">67,50</td></tr><tr><td>Prix fixe 10 ans et plus</td><td style="text-align:right">70,00</td></tr></table>
+    <p class="small" style="margin:6px 0 0">Prix payé pour l'injection partagée, identique dans les trois Régions.</p></div>
+  <div class="card" style="padding:10px 14px"><div class="num">FRAIS DE GESTION DU PRODUCTEUR</div>
+    <table style="margin-top:4px"><tr><th>Volume partagé par an</th><th style="text-align:right">€/MWh</th></tr>
+    <tr><td>Moins de 100 MWh</td><td style="text-align:right">8</td></tr><tr><td>100 à 250 MWh</td><td style="text-align:right">7</td></tr><tr><td>250 à 500 MWh</td><td style="text-align:right">6</td></tr><tr><td>500 MWh et plus</td><td style="text-align:right">5</td></tr></table>
+    <p style="margin:6px 0 0;font-size:12.5px">Déduits à la source. <b>Exemple :</b> prix fixe 5 ans, 300 MWh par an : 67,50 − 6 = <b>61,50 €/MWh net</b>.</p></div>
+</div>
+<div class="grid g3" style="gap:12px;margin-top:12px">
+  <div class="card" style="padding:9px 14px"><h3>À ajouter sur ces prix</h3><p style="margin:0;font-size:13px">Dans les trois Régions, les frais de réseau, de transport et les taxes s'ajoutent au prix de l'énergie partagée.</p></div>
+  <div class="card b" style="padding:9px 14px"><h3>L'avantage de Bruxelles</h3><p style="margin:0;font-size:13px">La cotisation sur l'énergie verte, environ 26 €/MWh, n'est pas due sur l'énergie partagée : un gros avantage pour le consommateur bruxellois.</p></div>
+  <div class="card" style="padding:9px 14px"><h3>En Flandre</h3><p style="margin:0;font-size:13px">Le mécanisme est différent : un forfait mensuel basé sur la simulation, régularisé en fin d'année. Il aboutit au même résultat.</p></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag">Un exemple · mesuré, pas des promesses</span><h1>Un exemple : <em>Energilia Brussels</em></h1>
+<p style="font-size:14.5px">Résultats mesurés sur les compteurs, d'octobre 2024 à fin août 2026.</p>
+<div class="grid" style="grid-template-columns:250px 1fr 250px;gap:22px;margin-top:10px;align-items:start">
+  <div><div class="ph" style="height:300px"><img src="storm/i-036.png"></div><div class="credit">Photo : MouseLord, Wikimedia Commons, CC BY-SA.</div></div>
+  <div class="card"><h3>Électricité partagée par année (MWh)</h3>
+    <div class="bars" style="margin-top:30px"><div style="height:1%"><b>4,1</b></div><div style="height:65%"><b>923,8</b></div><div style="height:100%"><b>1 427</b></div></div>
+    <div class="barl"><span>2024</span><span>2025</span><span>2026</span></div>
+    <p class="small" style="margin-top:8px">2024 : à partir d'octobre. 2026 : janvier à juin.</p></div>
+  <div><div class="bigk"><b>3 291 MWh</b><span>partagés</span></div><div class="bigk"><b>28,7 %</b><span>des besoins des consommateurs couverts</span></div><div class="bigk"><b>57,4 %</b><span>de l'injection des producteurs valorisée</span></div>
+    <p class="small">Membres à citer : Delhaize, Thon Hotels, Dott, Facq, Médecins Sans Frontières, Oxfam.</p></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag">Ils partagent déjà</span><h1>Des références <em>pour chaque type de prospect</em></h1>
+<div class="grid g3">
+  <div class="card" style="padding:10px"><div class="ph" style="height:140px"><img src="storm/i-028.png"></div><h3 style="margin-top:8px">Heidelberg Materials</h3><p class="small">Une opération dédiée entre les sites du groupe et leurs partenaires.</p><p style="margin:4px 0 0;color:var(--or);font-weight:700">15 membres · 3 849 MWh/an</p></div>
+  <div class="card" style="padding:10px"><div class="ph" style="height:140px"><img src="storm/i-030.png"></div><h3 style="margin-top:8px">Facq</h3><p class="small">Un même groupe multi-sites, présent dans les trois Régions.</p><p style="margin:4px 0 0;color:var(--or);font-weight:700">Un seul interlocuteur</p></div>
+  <div class="card" style="padding:10px"><div class="ph" style="height:140px"><img src="storm/i-012.png"></div><h3 style="margin-top:8px">Brasserie du Bocq</h3><p class="small">Première opération multi-sites en Wallonie, démarrée fin mai 2025.</p><p style="margin:4px 0 0;color:var(--or);font-weight:700">167,3 MWh partagés en 12 mois</p></div>
+</div>
+<table style="margin-top:8px"><tr><th style="width:24%">Votre prospect est</th><th>Références à citer</th></tr>
+<tr><td><b>Une entreprise bruxelloise</b></td><td>Delhaize, Thon Hotels, Dott, Facq, Savonneries Bruxelloises</td></tr>
+<tr><td><b>Une association</b></td><td>Médecins Sans Frontières, Médecins du Monde, Amnesty International, Oxfam</td></tr>
+<tr><td><b>Une commune, un zoning</b></td><td>Rixensart, Auderghem, Hannut</td></tr></table>
+<div class="credit">Photos d'illustration reprises de la présentation commerciale RaYSun.</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s big"><span class="tag">Qui cibler</span><h1>Les bons prospects : <em>des professionnels avec une facture d'électricité</em></h1>
+<div class="grid g2">
+  <div><div class="card o"><h3>À démarcher</h3><ul><li>Bâtiments professionnels, entreprises et ASBL, quel que soit le niveau de consommation.</li><li>Priorité actuelle : <b>Bruxelles</b>, où Energilia Brussels manque de production.</li><li>Producteurs solaires : installations d'au moins 200 kWc en priorité.</li><li>Entreprises à plusieurs sites : un seul interlocuteur pour tous les sites.</li><li>Profil idéal de consommateur : une consommation stable, y compris l'été et le week-end.</li></ul></div></div>
+  <div><div class="card"><h3>Hors cible</h3><ul><li>Particuliers et maisons individuelles.</li><li>Entreprises déjà membres ou déjà suivies : la plateforme vous le signale.</li></ul></div>
+    <div class="card b" style="margin-top:12px"><h3>Le bon interlocuteur</h3><p>C'est la personne qui paie la facture d'électricité (le titulaire du code EAN), pas forcément le propriétaire du bâtiment.</p></div>
+    <div class="card" style="margin-top:12px"><h3>Conseil de démarrage</h3><p>Commencez petit et multipliez les contacts : un e-mail puis un appel, auprès des petites entreprises et des ASBL de votre entourage.</p></div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c big"><span class="tag">Le parcours</span><h1>D'un nom d'entreprise à un contrat : <em>qui fait quoi</em></h1>
+<div class="grid g4">
+  <div class="card o"><div class="num">01 · VOUS</div><h3>Enregistrer</h3><p class="small">Vous trouvez l'entreprise sur la carte et vous créez sa fiche. Elle entre dans vos dossiers.</p></div>
+  <div class="card o"><div class="num">02 · VOUS</div><h3>Contacter</h3><p class="small">Appel, e-mail ou visite. Objectif : comprendre la situation et obtenir la dernière facture d'électricité avec la consommation annuelle.</p></div>
+  <div class="card b"><div class="num b">03 · RAYSUN</div><h3>Simuler et proposer</h3><p class="small">RaYSun prépare la simulation et l'offre à partir de la facture. Si elles existent, les courbes au quart d'heure affinent le résultat.</p></div>
+  <div class="card b"><div class="num b">04 · RAYSUN</div><h3>Signer et gérer</h3><p class="small">Le contrat est envoyé au client pour signature en ligne. RaYSun gère ensuite l'entrée dans l'opération et la facturation.</p></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <div class="card"><h3>Pendant le premier contact</h3><ul><li>Une phrase sur RaYSun, puis une question ouverte sur la facture d'énergie.</li><li>Écouter : consommation, nombre de sites, qui décide.</li><li>Prochain pas : « Envoyez-moi votre dernière facture, je vous fais préparer une simulation personnalisée. »</li></ul></div>
+  <div class="card"><h3>À ne pas faire</h3><ul><li>Calculer une économie pendant l'appel : la simulation est gratuite et sans engagement, elle vient ensuite.</li><li>Annoncer une consommation estimée au prospect : l'estimation peut être fausse.</li><li>Contacter une entreprise avant de l'avoir enregistrée.</li></ul></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag">Exemples</span><h1>Un appel et un e-mail <em>qui ouvrent la porte</em></h1>
+<div class="grid g2">
+  <div><h3>Exemple d'appel, en cinq temps</h3>
+    <div class="step"><i>1</i><p><b>Se présenter en dix secondes :</b> « Bonjour, [prénom], je travaille avec RaYSun, qui gère des communautés d'énergie en Belgique. »</p></div>
+    <div class="step"><i>2</i><p><b>L'accroche :</b> « Nous aidons des entreprises comme la vôtre à réduire leur facture d'électricité, de 26 % en moyenne, sans investissement. »</p></div>
+    <div class="step"><i>3</i><p><b>La question ouverte :</b> « La maîtrise de vos coûts d'énergie est-elle un sujet pour vous en ce moment ? »</p></div>
+    <div class="step"><i>4</i><p><b>Écouter et qualifier :</b> consommation, nombre de sites, qui décide.</p></div>
+    <div class="step"><i>5</i><p><b>Le prochain pas :</b> « Envoyez-moi votre dernière facture, je vous fais préparer une simulation gratuite et sans engagement. »</p></div></div>
+  <div><h3>Exemple de premier e-mail</h3>
+    <div class="quote"><b>Objet :</b> Opportunité de partage d'énergie à [Ville]</div>
+    <div class="quote">Connaissez-vous le modèle des communautés d'énergie ? Cela vous permet de réduire votre facture d'électricité tout en consommant de l'électricité verte produite localement à un prix stable dans le temps.</div>
+    <div class="quote">Une communauté d'énergie est un regroupement d'entreprises, producteurs et consommateurs, qui échangent de l'énergie entre elles au niveau local.</div>
+    <div class="quote">Quand seriez-vous disponible pour en discuter de vive voix ?</div>
+    <p class="small">Vouvoiement, 110 à 150 mots, pas de chiffre de consommation, pas de mention du solaire dans un premier e-mail. À un producteur, on peut écrire que son surplus peut être racheté à un prix 2 à 3 fois supérieur à celui de son fournisseur.</p></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s big"><span class="tag">Objections</span><h1>Les objections courantes et <em>la réponse recommandée</em></h1>
+<table><tr><th style="width:30%">Objection</th><th>Réponse</th></tr>
+<tr><td><b>« C'est quoi exactement, RaYSun ? »</b></td><td>Un gestionnaire de communautés d'énergie. Un peu comme un syndic d'immeuble : il gère l'entité qui permet aux membres d'échanger leur énergie.</td></tr>
+<tr><td><b>« On a déjà un fournisseur. »</b></td><td>Vous le gardez. L'énergie partagée vient en complément, pour la part locale et renouvelable.</td></tr>
+<tr><td><b>« C'est trop beau pour être vrai. »</b></td><td>Citer des membres actuels et les études de cas publiées (Brasserie du Bocq, Energilia Brussels) : des résultats mesurés, pas des promesses.</td></tr>
+<tr><td><b>« L'économie sera trop faible. »</b></td><td>C'est un gain sans investissement et sans engagement de volume. La simulation personnalisée donnera le chiffre réel ; pour plusieurs sites, demander une simulation multi-sites.</td></tr>
+<tr><td><b>« Je ne suis pas le décideur. »</b></td><td>Demander qui l'est, et proposer d'envoyer un document de présentation à faire suivre.</td></tr>
+<tr><td><b>« Rappelez-moi dans quelques mois. »</b></td><td>Accepter, demander le meilleur créneau, et noter le rappel dans la discussion du dossier.</td></tr></table>
+<p class="small" style="margin-top:8px">Références à citer selon l'interlocuteur. Entreprise bruxelloise : Delhaize, Thon Hotels, Dott, Facq. Association : Médecins Sans Frontières, Médecins du Monde, Amnesty International, Oxfam. Industriel wallon : Heidelberg Materials, Brasserie du Bocq. Commune : Rixensart, Auderghem, Hannut.</p>
+<div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s dark part"><div class="circle"></div><div class="in"><div class="n">Partie 2</div><h1>La plateforme<br>apporteurs</h1><p>Trouver des entreprises, les enregistrer à votre nom, suivre vos dossiers et vos commissions.</p></div></section>
+
+<section class="s c big"><span class="tag b">Accès</span><h1>Une connexion, <em>deux espaces</em></h1>
+<div class="shot"><img src="shots/8-entete.png"></div><div class="legend">L'en-tête de la plateforme : votre nom, le passage entre la carte et vos dossiers, la déconnexion.</div>
+<div class="grid g3" style="margin-top:14px">
+  <div class="card"><h3>Se connecter</h3><p>Adresse : <b>citywatt-ambassadeurs.netlify.app</b></p><p class="small">Avec votre e-mail et votre mot de passe, ou par un lien de connexion reçu par e-mail. Mot de passe oublié : utilisez le lien de connexion, ou écrivez à Eric.</p></div>
+  <div class="card o"><h3>La carte</h3><p>Pour chercher des entreprises autour d'un point, voir leurs coordonnées, créer leur fiche ou proposer un lieu.</p></div>
+  <div class="card b"><h3>Vos dossiers</h3><p>Pour suivre les prospects à votre nom, discuter avec RaYSun, voir vos commissions et votre place au classement.</p></div>
+</div>
+<p class="small" style="margin-top:10px">Enregistrez l'adresse dans vos favoris. La plateforme est en version bêta : elle évolue avec vos retours.</p>
+<div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag b">La règle d'or</span><h1>Enregistrer <em>avant</em> de contacter</h1>
+<div class="grid g2">
+  <div><p style="font-size:15.5px;margin-bottom:12px">Un prospect n'a qu'un seul apporteur. C'est l'enregistrement sur la plateforme qui vous l'attribue, pas le premier appel.</p>
+    <div class="step"><i>1</i><p><b>Cherchez l'entreprise</b> sur la carte, ou proposez le lieu s'il n'y figure pas.</p></div>
+    <div class="step"><i>2</i><p><b>Créez sa fiche</b> : elle est créée dans le CRM de RaYSun et ajoutée à vos dossiers.</p></div>
+    <div class="step"><i>3</i><p><b>Contactez ensuite</b> le prospect, en sachant que le dossier est à votre nom.</p></div>
+    <span class="pill">Pas de fiche, pas de commission garantie</span></div>
+  <div><div class="card b" style="padding:7px 13px"><h3>Ce que la plateforme vérifie pour vous</h3><ul><li style="font-size:13.5px">Les entreprises déjà membres ou déjà suivies par RaYSun ne sont pas proposées.</li><li style="font-size:13.5px">Si un autre apporteur suit déjà le prospect, l'ajout à vos dossiers est refusé.</li></ul></div>
+    <div class="card o" style="margin-top:6px;padding:7px 13px"><h3>Un dossier doit avancer</h3><p style="font-size:13.5px;margin:0">Un dossier inactif après environ 6 mois peut être préempté par un autre apporteur d'affaires. Notez chaque échange dans la discussion du dossier.</p></div>
+    <div class="card" style="margin-top:6px;padding:7px 13px"><h3>Plusieurs sites, un seul décideur</h3><p style="font-size:13.5px;margin:0">Enregistrez tous les sites en une fois. La commission revient à l'apporteur qui obtient l'accord du décideur.</p></div>
+    <div class="card" style="margin-top:6px;padding:7px 13px"><h3>Confidentialité</h3><p style="font-size:13.5px;margin:0">Vous ne voyez que vos dossiers. Le classement n'affiche jamais le nom des autres.</p></div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag b">La carte · 1</span><h1>Lire la carte : <em>membres, zonings et dossiers</em></h1>
+<div class="split" style="grid-template-columns:560px 1fr">
+  <div><div class="shot"><img src="shots/1-carte.png"></div><div class="legend">Écran d'illustration : données fictives et fond de carte schématique. En ligne, le fond est une carte Google avec vue satellite.</div></div>
+  <div><div class="step"><i>1</i><p><b>Points verts</b> : les membres des communautés. Ils servent de point de départ aux recherches.</p></div>
+    <div class="step"><i>2</i><p><b>Contours bleus</b> : les zonings d'activité, visibles en zoomant.</p></div>
+    <div class="step"><i>3</i><p><b>Pastilles « D »</b> : vos dossiers en cours. Un clic ouvre votre espace dossiers.</p></div>
+    <div class="step"><i>4</i><p><b>Menu de gauche</b> : afficher ou masquer chaque type de point, et chercher autour d'une adresse.</p></div>
+    <div class="step"><i>5</i><p><b>« Qui cibler en ce moment ? »</b> : la priorité commerciale du moment, tenue à jour par RaYSun.</p></div>
+    <div class="step"><i>6</i><p><b>Plan / Satellite</b> : la vue satellite aide à repérer les grandes toitures.</p></div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag b">La carte · 2</span><h1>Lancer une recherche : <em>un point, un rayon, un critère</em></h1>
+<div class="split" style="grid-template-columns:1fr 500px">
+  <div><h3>Trois façons de choisir le point</h3>
+    <div class="step"><i>1</i><p>Cliquer sur un <b>membre</b> (point vert) : idéal pour trouver ses voisins.</p></div>
+    <div class="step"><i>2</i><p>Cliquer <b>n'importe où sur la carte</b>, ou sur un lieu indiqué par Google (commerce, entreprise).</p></div>
+    <div class="step"><i>3</i><p>Entrer une <b>adresse</b> dans le menu de gauche, puis « Localiser ».</p></div>
+    <h3 style="margin-top:12px">Puis, dans le panneau de droite</h3>
+    <ul><li><b>Rayon</b> : 500 m, 1 km, 2 km ou 5 km. Le cercle se dessine sur la carte.</li><li><b>Critère</b> : toutes les entreprises, gros consommateurs (100 MWh par an et plus), gros producteurs potentiels (toiture de 500 m² et plus), ou les deux.</li><li><b>« Chercher les entreprises »</b> : comptez 10 à 30 secondes, la recherche analyse aussi les toitures les plus prometteuses.</li></ul>
+    <p class="small" style="margin-top:6px">En zone dense, réduisez le rayon ou ajoutez un critère : la liste affiche 200 entreprises au maximum, les plus grands sites d'abord.</p></div>
+  <div><div class="shot"><img src="shots/c-recherche.png"></div><div class="legend">Écran d'illustration, données fictives.</div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag b">La carte · 3</span><h1>Lire une entreprise de la liste <em>et passer à l'action</em></h1>
+<div class="split" style="grid-template-columns:400px 1fr">
+  <div><div class="shot"><img src="shots/4-entreprise.png"></div><div class="legend">Écran d'illustration, données fictives.</div></div>
+  <div><div class="step"><i>1</i><p><b>Nom, adresse et distance</b> au point de recherche. Un clic sur le nom montre l'entreprise sur la carte.</p></div>
+    <div class="step"><i>2</i><p><b>Activité, consommation estimée, toiture, potentiel solaire</b> : des ordres de grandeur automatiques, pas des mesures. Ne les citez pas au prospect.</p></div>
+    <div class="step"><i>3</i><p><b>Coordonnées</b> de l'entreprise, et la <b>personne de contact</b> quand RaYSun la connaît.</p></div>
+    <div class="step"><i>4</i><p><b>Appeler</b> et <b>E-mail</b> ouvrent votre téléphone ou votre messagerie.</p></div>
+    <div class="step"><i>5</i><p><b>« Créer la fiche Odoo + ajouter à mes dossiers »</b> : à faire avant le premier contact.</p></div>
+    <div class="step"><i>6</i><p><b>« Je connais quelqu'un ici »</b> : pour transmettre un nom de contact ou proposer une introduction.</p></div>
+    <div class="card b" style="margin-top:6px"><p style="margin:0" class="small">Un toit déjà équipé de panneaux reste intéressant : l'entreprise peut entrer comme producteur. Les données de toiture sont indicatives et à vérifier sur place.</p></div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag b">La carte · 4</span><h1>Créer la fiche : <em>le prospect est à votre nom</em></h1>
+<div class="split" style="grid-template-columns:400px 1fr">
+  <div><div class="shot"><img src="shots/5-fiche-creee.png"></div><div class="legend">Après la création : le message de confirmation, avec le lien vers vos dossiers. Données fictives.</div></div>
+  <div><h3>Ce qui se passe quand vous cliquez</h3>
+    <div class="step"><i>1</i><p>Une confirmation vous est demandée.</p></div>
+    <div class="step"><i>2</i><p>La société et une opportunité sont créées dans le CRM de RaYSun (Odoo), avec la mention de votre nom et de votre société.</p></div>
+    <div class="step"><i>3</i><p>Le prospect entre dans <b>vos dossiers</b>, déjà confirmé, avec ses coordonnées et sa position sur la carte.</p></div>
+    <div class="step"><i>4</i><p>L'entreprise ne sera plus proposée aux autres utilisateurs dans les recherches.</p></div>
+    <div class="card o" style="margin-top:8px"><h3>Si l'ajout est refusé</h3><p style="margin:0">Le message « cette entreprise est déjà suivie par un autre apporteur » signifie qu'un dossier ouvert existe déjà. Ne contactez pas le prospect et parlez-en à RaYSun.</p></div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag b">La carte · 5</span><h1>Proposer un lieu <em>qui n'est pas dans la liste</em></h1>
+<div class="split" style="grid-template-columns:1fr 470px">
+  <div><p>Le bouton <b>« + Proposer un lieu »</b>, en bas de la carte, sert pour un bâtiment repéré sur le terrain ou un endroit où vous connaissez quelqu'un.</p>
+    <div class="step"><i>1</i><p>Cliquez sur la carte à l'endroit du lieu, ou tapez son adresse puis « Localiser sur la carte ».</p></div>
+    <div class="step"><i>2</i><p>Donnez le <b>nom du lieu</b> et dites <b>pourquoi</b> : grande toiture, consommation importante, projet en cours.</p></div>
+    <div class="step"><i>3</i><p>Précisez si possible le type de bâtiment, la Région et la présence de panneaux solaires.</p></div>
+    <div class="step"><i>4</i><p>Indiquez si vous avez un <b>contact sur place</b> et, si vous les avez, les données d'énergie ou une facture.</p></div>
+    <div class="card b" style="margin-top:6px"><p style="margin:0" class="small">Vérifiez le point placé sur la carte avant d'envoyer : une adresse imprécise peut être mal localisée. RaYSun reçoit chaque proposition et vous répond. Les maisons individuelles ne sont pas acceptées.</p></div></div>
+  <div><div class="shot"><img src="shots/c-proposer.png"></div><div class="legend">Écran d'illustration, données fictives.</div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag b">Exemple pas à pas</span><h1>Une matinée de prospection, <em>de la carte au dossier</em></h1>
+<p style="font-size:14px">Camille, apporteuse d'affaires, cherche des voisins pour un membre d'Energilia Brussels à Anderlecht. Exemple fictif.</p>
+<div class="tl" style="margin-top:10px">
+  <div><div class="shot"><img src="shots/e1.png"></div><div class="step" style="margin-top:8px"><i>1</i><p style="font-size:12.5px"><b>9 h 00.</b> Elle clique sur un membre, choisit 1 km et « Gros consommateurs ».</p></div></div>
+  <div><div class="shot"><img src="shots/4-entreprise.png"></div><div class="step" style="margin-top:8px"><i>2</i><p style="font-size:12.5px"><b>9 h 05.</b> Quatre entreprises sortent. Une imprimerie à 310 m a une grande toiture et un contact énergie.</p></div></div>
+  <div><div class="shot"><img src="shots/e3.png"></div><div class="step" style="margin-top:8px"><i>3</i><p style="font-size:12.5px"><b>9 h 06.</b> Elle crée la fiche avant d'appeler : le prospect est à son nom.</p></div></div>
+  <div><div class="shot"><img src="shots/e4.png"></div><div class="step" style="margin-top:8px"><i>4</i><p style="font-size:12.5px"><b>9 h 20.</b> Après l'appel, elle note l'échange dans la discussion du dossier et demande la facture.</p></div></div>
+</div>
+<div class="card b" style="margin-top:8px;padding:9px 14px"><p style="margin:0;font-size:13.5px"><b>La suite :</b> la facture reçue est transmise à RaYSun, qui prépare la simulation et l'offre. La commission démarre quand le client échange réellement de l'énergie.</p></div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag b">Vos dossiers · 1</span><h1>Suivre un dossier, <em>de la proposition à la fiche traitée</em></h1>
+<div class="split" style="grid-template-columns:230px 230px 1fr; display:grid; gap:18px">
+  <div><div class="shot" style="height:345px"><img src="shots/c-d1.png"></div><div class="legend">Un dossier que RaYSun vous propose.</div></div>
+  <div><div class="shot" style="height:345px"><img src="shots/c-d2.png" style="width:100%"></div><div class="legend">Un dossier confirmé : facture, « Fiche traitée », « Dossier perdu ».</div></div>
+  <div><h3>Deux origines</h3><p style="font-size:13px">Les fiches que <b>vous créez</b> depuis la carte arrivent confirmées. Les dossiers que <b>RaYSun vous confie</b> arrivent « Proposé », avec un e-mail.</p>
+    <h3 style="margin-top:8px">Les étapes</h3>
+    <div class="step" style="margin-bottom:6px"><i>1</i><p><b>Proposé</b> : « Je confirme ce dossier » ou « Je ne peux pas le prendre ».</p></div>
+    <div class="step" style="margin-bottom:6px"><i>2</i><p><b>Confirmé</b> : vous contactez le prospect, par téléphone, e-mail ou visite, et vous obtenez sa facture d'électricité.</p></div>
+    <div class="step" style="margin-bottom:6px"><i>3</i><p><b>Fiche traitée</b> : joignez la facture et cliquez « Fiche traitée ». Elle part chez RaYSun, qui prépare la simulation.</p></div>
+    <div class="card o" style="padding:8px 12px;margin-top:6px"><h3>Dossier perdu</h3><p style="margin:0;font-size:13px">Le prospect ne donnera pas suite ? Indiquez la raison et cliquez « Dossier perdu ». La fiche est classée perdue dans le CRM et quitte vos dossiers. Un apporteur qui reprendra ce prospect verra qu'une tentative a déjà échoué, avec la date.</p></div>
+    <p style="margin-top:8px;font-size:13px"><b>La discussion :</b> chaque dossier a son fil de messages avec RaYSun, noté aussi sur la fiche du prospect dans le CRM.</p>
+    <p class="small">Écrans d'illustration, données fictives.</p></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c big"><span class="tag b">Vos dossiers · 2</span><h1>Votre part et <em>votre place au classement</em></h1>
+<div class="shot" style="width:760px"><img src="shots/9-classement.png"></div><div class="legend">Écran d'illustration, données fictives.</div>
+<div class="grid g3" style="margin-top:14px">
+  <div class="card"><h3>Votre part</h3><p>Le pourcentage que représentent vos commissions dans le total de tous les apporteurs, par trimestre ou par année.</p></div>
+  <div class="card"><h3>Vos montants</h3><p>Le total de vos commissions hors TVA sur la période, et votre rang.</p></div>
+  <div class="card b"><h3>Le podium</h3><p>Les trois premiers de la période. Les autres apporteurs apparaissent sans leur nom, avec leur part seulement.</p></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s"><span class="tag b">Vos dossiers · 3</span><h1>Vos commissions, <em>client par client</em></h1>
+<div class="split" style="grid-template-columns:580px 1fr">
+  <div><div class="shot"><img src="shots/12-commissions.png"></div><div class="legend">Écran d'illustration : clients, volumes et tarifs fictifs.</div></div>
+  <div><div class="card o"><h3>La formule</h3><p style="margin:0">Commission d'un point de fourniture = consommation partagée × tarif consommation + injection partagée × tarif injection.</p></div>
+    <ul style="margin-top:10px"><li>Les volumes sont ceux mesurés par le gestionnaire de réseau, en MWh.</li><li>Les tarifs, en €/MWh, sont ceux de votre accord d'apport.</li><li>Seuls les points qui échangent réellement de l'énergie génèrent une commission : elle démarre quand le client est entré dans l'opération.</li><li>Les montants sont repris chaque nuit du calcul de RaYSun, et « Voir le calcul et les clients » détaille chaque mois.</li></ul>
+    <p class="small" style="margin-top:6px">Vous facturez, hors TVA, quand RaYSun confirme le montant de la période.</p></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s c"><span class="tag b">Support</span><h1>Un bug, une idée ? <em>Le bouton Support</em></h1>
+<div class="split" style="grid-template-columns:330px 1fr">
+  <div><div class="shot"><img src="shots/7-support.png"></div><div class="legend">Écran d'illustration.</div></div>
+  <div><p>Le bouton <b>Support</b> est en bas à gauche de la carte, et dans l'en-tête de l'espace dossiers.</p>
+    <div class="step"><i>1</i><p>Choisissez <b>« Signaler un bug »</b> ou <b>« Demander une amélioration »</b>.</p></div>
+    <div class="step"><i>2</i><p>Décrivez ce que vous faisiez, ce qui s'est passé et ce que vous attendiez.</p></div>
+    <div class="step"><i>3</i><p>Ajoutez jusqu'à trois <b>captures d'écran</b> : choisissez les images ou collez-les avec Ctrl+V.</p></div>
+    <div class="step"><i>4</i><p>« Envoyer » : votre message arrive directement chez Eric, par e-mail et dans sa liste de tâches.</p></div>
+    <div class="card b" style="margin-top:8px"><p style="margin:0">La plateforme est en version bêta et avance par itérations : testez, puis envoyez vos retours et vos questions de prospection. Chaque remontée compte.</p></div></div>
+</div><div class="foot"><span>RaYSun · Sales book apporteurs d'affaires</span><span class="pn"></span></div></section>
+
+<section class="s big"><span class="tag">En pratique</span><h1>Votre routine de la semaine <em>et vos contacts</em></h1>
+<div class="grid g2">
+  <div class="card o"><h3>Chaque semaine</h3><ul>
+    <li>Une recherche sur la carte dans un nouveau quartier ou un nouveau zoning.</li>
+    <li>Les fiches créées <b>avant</b> tout contact.</li>
+    <li>E-mail puis appel aux nouveaux prospects.</li>
+    <li>La facture d'électricité demandée à chaque prospect intéressé, et transmise à RaYSun.</li>
+    <li>Un message dans la discussion du dossier après chaque échange.</li>
+    <li>« Fiche traitée » cliqué, facture jointe, dès que vous l'avez.</li>
+    <li>« Dossier perdu » cliqué, avec la raison, quand un prospect ne donnera pas suite.</li></ul></div>
+  <div><div class="card"><h3>Vos contacts chez RaYSun</h3>
+    <table><tr><td><b>Eric Rwamucyo</b><br><span class="small">Co-CEO, stratégie commerciale et juridique</span></td><td>Votre interlocuteur : accord d'apport, accès, méthode, plateforme.<br>eric.rw@raysun.solar</td></tr>
+    <tr><td><b>Max Boutsen et Alexis Fabre</b></td><td>Simulations, offres et décompte des commissions.</td></tr></table></div>
+    <div class="card b" style="margin-top:12px"><h3>À retenir</h3><ul><li>Enregistrer avant de contacter.</li><li>Demander la facture, ne pas chiffrer soi-même.</li><li>Energilia est une opération de partage d'énergie.</li><li>Un doute, un bug : le bouton Support.</li></ul></div></div>
+</div><div class="foot"><span>RaYSun · raysun.solar · hi@raysun.solar</span><span class="pn"></span></div></section>
+<script>document.querySelectorAll('.s').forEach((x, k) => { const n = x.querySelector('.pn'); if (n) n.textContent = String(k + 1).padStart(2, '0'); });</script></body></html>

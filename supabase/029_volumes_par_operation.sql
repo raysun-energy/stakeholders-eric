@@ -1,0 +1,4 @@
+-- Volumes échangés par opération de partage et par mois, repris chaque nuit de l'outil d'Alexis par amb-fees-sync.
+-- Sert aux chiffres du sales book en ligne (site/salesbook.html). Agrégats seulement : aucun EAN, aucun nom de client.
+-- Appliqué le 24/11/2026 : table public.amb_op_volumes (operation, mois, inj_mwh, conso_mwh, eans), lecture par les membres
+-- connectés, écriture par la fonction public.amb_op_volumes_replace(jsonb) réservée à service_role.

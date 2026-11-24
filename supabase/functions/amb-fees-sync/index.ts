@@ -3,6 +3,7 @@
 // fees_courant d'un AUTRE projet Supabase. Cette fonction le lit, refait le même calcul que le moteur de l'outil
 // (fee d'un EAN pour un mois = conso partagée × tarif conso + injection partagée × tarif prod, kWh et EUR/MWh),
 // additionne par apporteur et par mois, puis remplace les lignes « outil-fees » de l'espace apporteurs.
+// Elle enregistre aussi les volumes échangés par opération et par mois (table amb_op_volumes), pour le sales book en ligne.
 // Sans paramètre : un appel forgé ne peut que relancer la même lecture.
 //
 // Secrets à définir (Edge Functions > Secrets) :
@@ -95,6 +96,17 @@ Deno.serve(async () => {
     const lignes = [...detail.values()].filter((l) => l.apporteur && (l.conso_kwh || l.inj_kwh));
     const { data: nd, error: e2 } = await sb.rpc('amb_fee_lines_replace', { p_lines: lignes });
     if (e2) throw new Error(e2.message);
+    // Volumes échangés par opération et par mois (tous les EAN, pas seulement ceux des apporteurs) : agrégats pour le sales book.
+    const vol = new Map<string, { operation: string; mois: string; inj: number; conso: number; eans: Set<string> }>();
+    for (const imp of d.imports ?? []) {
+      const op = operation.get(imp.operationId); if (!op) continue;
+      const k = `${op}|${imp.mois}`;
+      const v = vol.get(k) ?? vol.set(k, { operation: op, mois: imp.mois, inj: 0, conso: 0, eans: new Set() }).get(k)!;
+      for (const l of imp.lignes ?? []) { v.inj += Number(l.injPartagee) || 0; v.conso += Number(l.consoPartagee) || 0; v.eans.add(l.ean); }
+    }
+    const volumes = [...vol.values()].map((v) => ({ operation: v.operation, mois: v.mois, inj_mwh: Math.round(v.inj) / 1000, conso_mwh: Math.round(v.conso) / 1000, eans: v.eans.size }));
+    const { error: e3 } = await sb.rpc('amb_op_volumes_replace', { p_rows: volumes });
+    if (e3) console.error('Volumes par opération non enregistrés', e3.message);
     const societes = new Set(rows.map((r) => r.apporteur)).size;
     await etat(true, `${n} mois repris pour ${societes} société(s), ${nd} lignes de détail`, doc.updated_at ?? null);
     return new Response(JSON.stringify({ ok: true, lignes: n, societes }), { headers: { 'Content-Type': 'application/json' } });
