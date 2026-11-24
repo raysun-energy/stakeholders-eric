@@ -219,3 +219,21 @@ dl { margin: 12px 0; }
 
 .btn.secondary:hover { border-color: var(--accent); }
 :focus-visible { outline: 2px solid var(--sun2); outline-offset: 2px; }
+
+/* Recherche d'entreprises autour d'un point : critères et liste de résultats */
+.search-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.search-fields select { margin-top: 4px; }
+.cand-card { border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 0 0 10px; background: var(--surface); }
+.cand-card.active { border-color: #2E5E8C; }
+.cand-card.done { opacity: .75; }
+.cand-card h3 { margin: 0 0 2px; font-size: 15px; }
+.cand-card p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.cand-name { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--text); text-align: left; cursor: pointer; }
+.cand-name:hover { text-decoration: underline; }
+.cand-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.cand-actions .btn { font-size: 13px; padding: 7px 12px; text-decoration: none; }
+.cand-contact { margin-top: 8px; font-size: 13px; }
+.cand-contact summary { cursor: pointer; color: var(--muted); }
+.cand-contact form { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.cand-contact .btn { grid-column: 1 / -1; justify-self: start; font-size: 13px; }
+@media (max-width: 600px) { .search-fields, .cand-contact form { grid-template-columns: 1fr; } }

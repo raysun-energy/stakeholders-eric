@@ -105,6 +105,15 @@
       </table>
     </div>
 
+    <div class="toolbar"><h2>Fiches Odoo créées depuis la carte</h2></div>
+    <p class="muted small">Entreprises envoyées dans Odoo depuis la recherche de la carte. Celles d’un apporteur d’affaires sont aussi dans ses dossiers.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Entreprise</th><th>Créée par</th><th>Arrive dans</th><th>Odoo</th></tr></thead>
+        <tbody id="map-fiches"></tbody>
+      </table>
+    </div>
+
     <div class="toolbar"><h2>Qui a accès</h2></div>
     <p class="muted small">Deux façons de donner accès :
       <b>avec un mot de passe</b> (recommandé) — remplissez le mot de passe ou cliquez sur « Générer », puis transmettez vous-même les identifiants à la personne ;
@@ -410,6 +419,19 @@
 
     const SUGG_FOLLOW_UP = ['Nouveau', 'À étudier', 'Retenu', 'Converti', 'Écarté', DONE];
     let suggestions = [];
+    async function loadMapFiches() {
+      const { data, error } = await sb.rpc('amb_map_fiches');
+      if (error) throw error;
+      document.getElementById('map-fiches').innerHTML = data.length ? data.map((f) => `
+        <tr>
+          <td>${esc(f.envoye_le.slice(0, 10))}</td>
+          <td>${esc(f.nom)}<small>${esc(f.adresse)}</small></td>
+          <td>${esc(f.envoye_par_nom)}</td>
+          <td>${f.envoye_par_org ? `Dossiers de ${esc(f.envoye_par_org)}` : 'Suivi équipe'}</td>
+          <td><a href="https://raysun.odoo.com/odoo/crm/${Number(f.odoo_lead_id)}" target="_blank" rel="noopener">Ouvrir la fiche</a></td>
+        </tr>`).join('') : '<tr><td colspan="5" class="muted">Aucune fiche créée depuis la carte pour le moment.</td></tr>';
+    }
+
     async function loadSuggestions() {
       const { data, error } = await sb.from('amb_suggestions').select('*').order('created_at', { ascending: false });
       if (error) throw error;
@@ -472,7 +494,7 @@
       myEmail = (who.user.email || '').toLowerCase();
       document.getElementById('login').hidden = true;
       document.getElementById('content').hidden = false;
-      await Promise.all([loadContributions(), loadMembers(), loadRequests(), loadSuggestions(), loadTarget()]);
+      await Promise.all([loadContributions(), loadMembers(), loadRequests(), loadSuggestions(), loadTarget(), loadMapFiches()]);
     }
 
     wireLoginForm(start);

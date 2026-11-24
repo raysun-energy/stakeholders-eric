@@ -38,27 +38,17 @@
   <main class="layout">
     <aside class="sidebar">
       <div class="intro">
-        <p>Zoomez sur un quartier ou un zoning : les points bleus sont les entreprises que nous aimerions approcher. Si l’une d’elles vous parle, cliquez dessus et dites-le nous. Vous connaissez un autre lieu ? Utilisez le bouton « + ».</p>
+        <p>Cliquez sur un membre (point vert) ou n’importe où sur la carte, ou entrez une adresse : vous obtenez la liste des entreprises à démarcher dans le rayon choisi, avec leurs coordonnées. Vous connaissez un autre lieu ? Utilisez le bouton « + ».</p>
         <input id="search" type="search" placeholder="Rechercher un immeuble, une société, une commune…">
         <div class="filters">
           <label><input type="checkbox" id="show-members" autocomplete="off"> <i class="dot member"></i><span>Membres des communautés (<span id="members-count">0</span>)</span></label>
           <label><input type="checkbox" id="show-suggestions" autocomplete="off"> <i class="dot sugg"></i><span>Lieux proposés</span></label>
-          <label title="Entreprises repérées autour de nos membres et pas encore approchées. Zoomez sur un quartier pour les voir."><input type="checkbox" id="show-candidates" autocomplete="off" checked> <i class="dot cand"></i><span>Entreprises à démarcher</span></label>
           <label title="Contours des zonings d’activité (géoportails régionaux). Visibles en zoomant sur une commune."><input type="checkbox" id="show-zonings" autocomplete="off" checked> <i class="dot zoning"></i><span>Zonings</span></label>
           <label id="dossiers-filter" hidden><input type="checkbox" id="show-dossiers" autocomplete="off" checked> <i class="dot dossier"></i><span>Dossiers apporteurs (<span id="dossiers-count">0</span>)</span></label>
           <label id="converted-filter" hidden><input type="checkbox" id="show-converted" autocomplete="off"> <span>Afficher les points convertis / traités</span></label>
         </div>
-        <label class="small" id="cand-filter-box" hidden style="display:block;margin-top:8px">Afficher
-          <select id="cand-filter" style="margin-top:4px">
-            <option value="">Toutes les entreprises</option>
-            <option value="conso">Gros consommateurs (100 MWh/an et plus)</option>
-            <option value="prod">Gros producteurs potentiels (toiture de 500 m² et plus)</option>
-            <option value="both">Gros consommateurs avec grande toiture</option>
-          </select>
-        </label>
-        <p class="muted small" id="cand-hint" hidden style="margin:8px 0 0"></p>
-        <form id="around-form" hidden style="margin-top:10px">
-          <label class="small" for="around-address">Équipe : chercher des entreprises autour d’une adresse, ou cliquez un lieu sur la carte</label>
+        <form id="around-form" style="margin-top:10px">
+          <label class="small" for="around-address">Chercher des entreprises autour d’une adresse</label>
           <div style="display:flex;gap:6px;margin-top:4px">
             <input id="around-address" type="search" autocomplete="off" placeholder="Rue, numéro, commune">
             <button type="submit" class="btn secondary" style="padding:8px 12px;font-size:13px">Localiser</button>
@@ -69,7 +59,8 @@
           <button type="button" class="btn secondary" id="zoning-import-btn" style="font-size:13px">Mettre à jour les zonings</button>
           <p class="muted small" id="zoning-import-msg" style="margin:6px 0 0;white-space:pre-line"></p>
         </div>
-        <button type="button" class="btn secondary" id="cand-export" hidden style="margin-top:8px;font-size:13px">Exporter toute la liste (Excel)</button>
+        <button type="button" class="btn secondary" id="cand-export" style="margin-top:8px;font-size:13px">Exporter toutes les entreprises (Excel)</button>
+        <p class="error small" id="cand-export-msg" style="margin:4px 0 0"></p>
         <!-- Critères de ciblage : texte modifiable par l'équipe dans le suivi équipe (table amb_settings). -->
         <details class="target" id="target-box" hidden>
           <summary>Qui cibler en ce moment ?</summary>

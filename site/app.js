@@ -4,7 +4,7 @@ const state = {
   suggestions: [], suggMarkers: new Map(),
   members: [], memberMarkers: [],
   dossiers: [], dossierMarkers: [],
-  candidates: new Map(), candMarkers: new Map(), candSelected: null, candForce: false,
+  search: null, candPin: null, // recherche d'entreprises en cours : { pt, filter, rows, done } et repère de l'entreprise montrée
   draft: null, // lieu en cours de proposition : { lat, lng, marker }
 };
 
@@ -46,13 +46,12 @@ function labelSide(lead) {
 function renderMarkers() {
   const map = state.map;
   // Membres d'abord, pour qu'ils restent sous les immeubles.
-  // L'équipe peut cliquer un membre pour chercher des entreprises autour de lui.
-  const team = state.user.role === 'admin';
+  // Un clic sur un membre ouvre la recherche d'entreprises autour de lui.
   state.memberMarkers = state.members.map((m) => map.addMarker({
     lat: m.lat, lng: m.lng, zIndex: 1,
-    html: `<div class="member-dot${team && m.id ? ' clickable' : ''}"></div>`,
+    html: '<div class="member-dot clickable"></div>',
     title: m.name ? `${m.name} — ${m.operation}` : `Membre — ${m.operation}`,
-    onClick: team && m.id ? () => selectMember(m) : undefined,
+    onClick: () => openSearch({ kind: 'membre', name: m.name || 'Membre', operation: m.operation, lat: m.lat, lng: m.lng, id: m.id }),
   }));
   for (const lead of state.leads) {
     if (lead.lat == null) continue;
@@ -87,56 +86,19 @@ function updateLabels() {
   document.body.classList.toggle('hide-labels', state.map.getZoom() < 12);
 }
 
-// --- Entreprises à démarcher (candidats de l'outil Zoning as Community) --------
-// Chargées pour la zone affichée seulement, à partir d'un certain zoom : la base en compte plusieurs milliers.
-
-const CAND_ZOOM = 14;
+// --- Entreprises à démarcher (outil Zoning as Community) ---------------------
+// Elles ne sont pas affichées sur la carte : elles sortent en liste après une recherche autour d'un point
+// (membre, lieu cliqué ou adresse), pour un rayon et des critères donnés.
 const CAND_CATEGORIES = {
   bureaux: 'Bureaux', horeca: 'Horeca', logistique: 'Logistique', commerce: 'Commerce', industrie: 'Industrie',
   industrie_lourde: 'Industrie lourde', construction: 'Construction', sante: 'Santé', data_tech: 'Données et technologies',
   sport_loisirs: 'Sport et loisirs', enseignement: 'Enseignement', autre: 'Autre activité',
 };
-const candHtml = (selected) => `<div class="pin cand${selected ? ' selected' : ''}"></div>`;
 const mwh = (kwh) => Math.round(kwh / 1000).toLocaleString('fr-BE');
 
-// Filtre « gros consommateurs / gros producteurs potentiels », appliqué côté base (carte et export).
-function candFilter() {
-  const v = $('#cand-filter').value;
+// Critères « gros consommateurs / gros producteurs potentiels », appliqués côté base (liste et export).
+function candFilter(v = '') {
   return { p_min_conso_kwh: v === 'conso' || v === 'both' ? 100000 : 0, p_min_toit_m2: v === 'prod' || v === 'both' ? 500 : 0 };
-}
-
-let candSeq = 0;
-async function refreshCandidates() {
-  const hint = $('#cand-hint');
-  const on = $('#show-candidates').checked;
-  const hideAll = () => state.candMarkers.forEach((m) => m.hide());
-  $('#cand-export').hidden = !on;
-  $('#cand-filter-box').hidden = !on;
-  if (!on) { hint.hidden = true; hideAll(); return; }
-  hint.hidden = false;
-  if (state.map.getZoom() < CAND_ZOOM && !state.candForce) { hideAll(); hint.textContent = 'Zoomez sur un quartier ou un zoning pour voir les entreprises à démarcher.'; return; }
-  const b = state.map.getBounds();
-  if (!b) return;
-  const n = ++candSeq;
-  const { data, error } = await sb.rpc('amb_candidates', { p_min_lat: b.minLat, p_max_lat: b.maxLat, p_min_lng: b.minLng, p_max_lng: b.maxLng, ...candFilter() });
-  if (n !== candSeq) return;                         // la carte a encore bougé entre-temps
-  if (error) { console.error(error); hint.textContent = 'Les entreprises ne peuvent pas être chargées pour le moment.'; return; }
-  const visible = new Set();
-  for (const c of data) {
-    visible.add(c.id);
-    state.candidates.set(c.id, c);
-    if (!state.candMarkers.has(c.id)) {
-      state.candMarkers.set(c.id, state.map.addMarker({
-        lat: c.lat, lng: c.lng, zIndex: 5, title: c.nom, html: candHtml(c.id === state.candSelected),
-        onClick: () => selectCandidate(c.id),
-      }));
-    }
-  }
-  state.candMarkers.forEach((m, id) => (visible.has(id) ? m.show() : m.hide()));
-  const total = data.length ? Number(data[0].total) : 0;
-  hint.textContent = !total ? ($('#cand-filter').value ? 'Aucune entreprise ne correspond à ce filtre dans cette zone.' : 'Aucune entreprise à démarcher dans cette zone.')
-    : total > data.length ? `${data.length} entreprises affichées sur ${total} dans cette zone (les plus grands sites). Zoomez pour voir les autres.`
-      : `${total} entreprise${total > 1 ? 's' : ''} à démarcher dans cette zone.`;
 }
 
 // Export en bloc de toutes les entreprises à démarcher (CSV lisible par Excel), par pages de 1000.
@@ -165,7 +127,7 @@ async function exportCandidates(btn) {
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   } catch (e) {
     console.error(e);
-    $('#cand-hint').textContent = 'L’export a échoué. Réessayez dans un instant.';
+    $('#cand-export-msg').textContent = 'L’export a échoué. Réessayez dans un instant.';
   }
   btn.disabled = false; btn.textContent = label;
 }
@@ -226,55 +188,94 @@ async function importZonings(btn) {
   refreshZonings().catch(console.error);
 }
 
-// --- Équipe : recherche d'entreprises candidates autour d'un membre ---
-// Appelle la fonction zc-voisins de l'outil Zoning as Community (côté serveur) : entreprises de la BCE dans le rayon,
-// estimation de la consommation, analyse des toitures (Google Solar) pour les plus prometteuses. Résultats gardés en base.
+// --- Recherche d'entreprises autour d'un point ---
+// 1. zc-voisins (outil Zoning as Community, côté serveur) cherche dans la BCE les entreprises du rayon et estime leur
+//    consommation. Pour l'équipe, il analyse aussi les toitures des plus prometteuses (Google Solar, payant).
+// 2. La liste est relue dans la base (amb_candidates_around) : entreprises pas encore suivies par RaYSun.
 const ZC_VOISINS_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-voisins';
-// Le cercle de recherche reste affiché, avec les entreprises qu'il contient, jusqu'à la fermeture de la fiche.
-function clearRadius() { state.candForce = false; state.map.setCircle(null); }
+const ZC_ODOO_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-opportunite';
+const SEARCH_TAGS = { membre: ['Membre', '#E3F2E9;color:#1E7F4E'], adresse: ['Adresse', '#FBEBDB;color:#9A5415'], point: ['Point sur la carte', '#FBEBDB;color:#9A5415'] };
 
-function selectMember(m) {
+async function zcCall(url, body) {
+  const { data: { session } } = await sb.auth.getSession();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify(body),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.ok) throw new Error(j.error || `Erreur ${res.status}`);
+  return j;
+}
+
+function clearRadius() {
+  state.search = null;
+  state.candPin?.hide(); state.candPin = null;
+  state.map.setCircle(null);
+}
+
+function openSearch(pt) {
   cancelDraft();
   clearSelection();
+  clearRadius();
+  state.search = { pt, rows: [], done: false };
+  const team = state.user.role === 'admin';
+  const [tag, color] = SEARCH_TAGS[pt.kind] || SEARCH_TAGS.point;
   $('#panel-body').innerHTML = `
     <div class="panel-head">
-      <span class="tag" style="background:${m.kind === 'adresse' ? '#FBEBDB;color:#9A5415' : '#E3F2E9;color:#1E7F4E'}">${m.kind === 'adresse' ? 'Adresse' : 'Membre'}</span>
-      <h2>${esc(m.name || 'Membre')}</h2>
-      <p class="muted">${esc(m.operation)}</p>
+      <span class="tag" style="background:${color}">${tag}</span>
+      <h2>${esc(pt.name)}</h2>
+      <p class="muted">${esc(pt.operation || '')}</p>
     </div>
-    <div class="admin-actions"><strong>Équipe : chercher des entreprises autour de ${m.kind === 'adresse' ? 'cette adresse' : 'ce membre'}</strong>
-      <p class="muted small" style="margin:4px 0 8px">Cherche dans la BCE les entreprises ${m.kind === 'adresse' ? '' : 'de la même Région '}dans le rayon choisi, estime leur consommation et analyse les toitures des plus prometteuses. Compter 10 à 30 secondes, et quelques centimes d’API Google par recherche.</p>
-      <label class="small">Rayon
-        <select id="member-radius" style="margin-top:4px"><option value="500">500 m</option><option value="1000" selected>1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select>
-      </label>
-      <div class="admin-buttons" style="margin-top:10px"><button type="button" class="btn secondary" id="member-search">Chercher les entreprises</button></div>
+    <div class="admin-actions"><strong>Chercher des entreprises autour de ce point</strong>
+      <div class="search-fields">
+        <label class="small">Rayon
+          <select id="member-radius"><option value="500">500 m</option><option value="1000" selected>1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select>
+        </label>
+        <label class="small">Critère
+          <select id="cand-filter">
+            <option value="">Toutes les entreprises</option>
+            <option value="conso">Gros consommateurs (100 MWh/an et plus)</option>
+            <option value="prod">Gros producteurs potentiels (toiture de 500 m² et plus)</option>
+            <option value="both">Les deux</option>
+          </select>
+        </label>
+      </div>
+      <div class="admin-buttons" style="margin-top:10px"><button type="button" class="btn primary" id="member-search">Chercher les entreprises</button></div>
+      <p class="muted small" style="margin:8px 0 0">${team ? 'Équipe : la recherche analyse aussi les toitures des entreprises les plus prometteuses. Compter 10 à 30 secondes et quelques centimes d’API Google par recherche.' : 'La recherche prend quelques secondes.'}</p>
       <p class="small" id="member-search-msg" style="margin:8px 0 0"></p>
-    </div>`;
-  // Cercle du rayon choisi, redessiné quand le rayon change.
-  const drawRadius = () => { state.candForce = true; state.map.setCircle({ lat: m.lat, lng: m.lng, radius: Number($('#member-radius').value) }); };
-  $('#member-radius').addEventListener('change', drawRadius);
+    </div>
+    <div id="cand-results"></div>`;
+  const radius = () => Number($('#member-radius').value);
+  const drawRadius = () => state.map.setCircle({ lat: pt.lat, lng: pt.lng, radius: radius() });
+  const msg = $('#member-search-msg');
+
+  // Relit la liste dans la base, pour le rayon et le critère choisis.
+  const list = async () => {
+    const { data, error } = await sb.rpc('amb_candidates_around', { p_lat: pt.lat, p_lng: pt.lng, p_radius_m: radius(), ...candFilter($('#cand-filter').value) });
+    if (error) throw error;
+    state.search.rows = data ?? [];
+    renderCandList();
+  };
+  $('#member-radius').addEventListener('change', () => { drawRadius(); state.search.done = false; $('#cand-results').innerHTML = ''; msg.textContent = ''; });
+  $('#cand-filter').addEventListener('change', () => { if (state.search.done) list().catch((e) => { console.error(e); msg.className = 'small error'; msg.textContent = 'La liste ne peut pas être chargée pour le moment.'; }); });
   $('#member-search').addEventListener('click', async (e) => {
-    const btn = e.currentTarget, msg = $('#member-search-msg');
+    const btn = e.currentTarget;
     btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Recherche en cours…';
+    let warn = '';
     try {
-      const { data: { session } } = await sb.auth.getSession();
-      const res = await fetch(ZC_VOISINS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ lat: m.lat, lng: m.lng, rayon_m: Number($('#member-radius').value), membre_id: m.id, source: 'bce' }),
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j.ok) throw new Error(j.error || `Erreur ${res.status}`);
-      const n = (j.candidats || []).length;
-      msg.className = 'small';
-      msg.textContent = n ? `${n} entreprise${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''} dans ce rayon. Elles sont maintenant sur la carte (points bleus).`
-        : 'Aucune entreprise trouvée dans ce rayon.';
-      $('#show-candidates').checked = true;
-      drawRadius();                                   // recadre sur le cercle de recherche
-      await refreshCandidates();
+      await zcCall(ZC_VOISINS_URL, { lat: pt.lat, lng: pt.lng, rayon_m: radius(), membre_id: pt.id ?? null, source: 'bce' });
     } catch (err) {
       console.error(err);
-      msg.className = 'small error'; msg.textContent = `La recherche a échoué : ${err.message}`;
+      warn = ' La recherche de nouvelles entreprises a échoué ; voici celles déjà connues dans ce rayon.';
+    }
+    try {
+      await list();
+      state.search.done = true;
+      msg.className = warn ? 'small error' : 'small'; msg.textContent = warn.trim();
+    } catch (err) {
+      console.error(err);
+      msg.className = 'small error'; msg.textContent = 'La liste ne peut pas être chargée pour le moment.';
     }
     btn.disabled = false;
   });
@@ -282,69 +283,107 @@ function selectMember(m) {
   drawRadius();
 }
 
-// Équipe : envoie l'entreprise dans Odoo (fonction zc-opportunite de l'outil Zoning as Community, côté serveur).
-const ZC_ODOO_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-opportunite';
-async function sendCandidateToOdoo(c, btn) {
-  const msg = $('#cand-odoo-msg');
-  btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Envoi dans Odoo…';
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const res = await fetch(ZC_ODOO_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ place_id: c.id }),
-    });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok || !j.ok) throw new Error(j.error || `Erreur ${res.status}`);
-    const url = j.url || `https://raysun.odoo.com/odoo/crm/${Number(j.odoo_lead_id)}`;
-    msg.className = 'small'; msg.innerHTML = `${j.deja ? 'Cette entreprise était déjà dans Odoo.' : 'Opportunité créée dans Odoo.'} <a href="${esc(url)}" target="_blank" rel="noopener">Ouvrir la fiche</a>`;
-    state.candMarkers.get(c.id)?.hide();
-    state.candMarkers.delete(c.id);
-    state.candidates.delete(c.id);
-    state.candSelected = null;
-  } catch (e) {
-    console.error(e);
-    msg.className = 'small error'; msg.textContent = `L’envoi a échoué : ${e.message}`;
-    btn.disabled = false;
-  }
-}
-
-function selectCandidate(id) {
-  const c = state.candidates.get(id);
-  if (!c) return;
-  cancelDraft();
-  clearSelection();
-  state.candSelected = id;
-  state.candMarkers.get(id)?.setHtml(candHtml(true));
-  const row = (k, v) => (v ? `<div class="kv"><dt>${k}</dt><dd>${v}</dd></div>` : '');
+function candCardHtml(c) {
+  const team = state.user.role === 'admin';
+  const tel = (v) => `<a href="tel:${esc(v.replace(/[^+\d]/g, ''))}">${esc(v)}</a>`;
+  const mail = (v) => `<a href="mailto:${esc(v)}">${esc(v)}</a>`;
   const site = c.site_web ? (/^https?:\/\//i.test(c.site_web) ? c.site_web : `https://${c.site_web}`) : '';
   const conso = c.conso_max_kwh ? `${c.conso_min_kwh ? mwh(c.conso_min_kwh) + ' à ' : 'jusqu’à '}${mwh(c.conso_max_kwh)} MWh/an` : '';
-  $('#panel-body').innerHTML = `
-    <div class="panel-head">
-      <span class="tag" style="background:#E3EDF7;color:#2E5E8C">Entreprise à démarcher</span>
-      <h2>${esc(c.nom)}</h2>
-      <p class="muted">${esc(c.adresse)}</p>
+  const facts = [CAND_CATEGORIES[c.categorie] || c.categorie, conso && `Consommation estimée : ${conso}`,
+    c.surface_toit_m2 && `Toiture : ${Number(c.surface_toit_m2).toLocaleString('fr-BE')} m²`,
+    c.pv_max_kwh_an && `Potentiel solaire : ${mwh(c.pv_max_kwh_an)} MWh/an`].filter(Boolean).map(esc).join(' · ');
+  const coords = [c.telephone && tel(c.telephone), c.email && mail(c.email),
+    site && `<a href="${esc(site)}" target="_blank" rel="noopener">${esc(site.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>`].filter(Boolean).join(' · ');
+  const contact = c.contact_nom || c.contact_tel || c.contact_email
+    ? [esc([c.contact_nom, c.contact_fonction].filter(Boolean).join(', ')), c.contact_tel && tel(c.contact_tel), c.contact_email && mail(c.contact_email)].filter(Boolean).join(' · ') : '';
+  const callTo = c.contact_tel || c.telephone, mailTo = c.contact_email || c.email;
+  return `<article class="cand-card" data-id="${esc(c.id)}">
+    <h3><button type="button" class="cand-name" data-locate title="Montrer sur la carte">${esc(c.nom)}</button></h3>
+    <p class="muted small">${esc(c.adresse)} · à ${c.distance_m >= 1000 ? (c.distance_m / 1000).toLocaleString('fr-BE', { maximumFractionDigits: 1 }) + ' km' : c.distance_m + ' m'}</p>
+    ${facts ? `<p class="small">${facts}</p>` : ''}
+    <p class="small">${coords || '<span class="muted">Pas de téléphone ni d’e-mail connus.</span>'}</p>
+    ${contact ? `<p class="small"><strong>Personne de contact :</strong> ${contact}</p>` : ''}
+    <div class="cand-actions">
+      ${callTo ? `<a class="btn secondary" href="tel:${esc(callTo.replace(/[^+\d]/g, ''))}">Appeler</a>` : ''}
+      ${mailTo ? `<a class="btn secondary" href="mailto:${esc(mailTo)}">E-mail</a>` : ''}
+      <button type="button" class="btn primary" data-odoo>Créer la fiche Odoo</button>
+      <button type="button" class="btn secondary" data-know>Je connais quelqu’un ici</button>
     </div>
-    <dl>
-      ${row('Activité', esc(CAND_CATEGORIES[c.categorie] || c.categorie))}
-      ${row('Consommation estimée', esc(conso))}
-      ${row('Toiture', c.surface_toit_m2 ? `${Number(c.surface_toit_m2).toLocaleString('fr-BE')} m²` : '')}
-      ${row('Potentiel solaire', c.pv_max_kwh_an ? `${mwh(c.pv_max_kwh_an)} MWh/an` : '')}
-      ${row('Téléphone', c.telephone ? `<a href="tel:${esc(c.telephone.replace(/[^+\d]/g, ''))}">${esc(c.telephone)}</a>` : '')}
-      ${row('E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '')}
-      ${row('Site web', site ? `<a href="${esc(site)}" target="_blank" rel="noopener">${esc(site.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>` : '')}
-    </dl>
-    ${c.telephone || c.email || site ? '' : '<p class="muted small">Pas de téléphone ni d’e-mail connus pour cette entreprise.</p>'}
-    <p class="muted small">Estimations automatiques d’après l’activité et la toiture : des ordres de grandeur, pas des mesures.</p>
-    <div class="pitch"><strong>Vous connaissez cette entreprise ?</strong><br>Une introduction ou un simple nom de contact nous aide à ouvrir la porte.</div>
-    <button type="button" class="btn primary" id="cand-propose" style="margin-top:12px">Je connais quelqu’un ici</button>
-    ${state.user.role === 'admin' ? `<div class="admin-actions"><strong>Équipe</strong>
-      <p class="muted small" style="margin:4px 0 8px">Crée la société et une opportunité « Zoning as Community » dans Odoo, à votre nom. L’entreprise quitte ensuite cette carte.</p>
-      <div class="admin-buttons"><button type="button" class="btn secondary" id="cand-odoo">Envoyer dans Odoo</button></div>
-      <p class="small" id="cand-odoo-msg" style="margin:8px 0 0"></p></div>` : ''}`;
-  $('#cand-odoo')?.addEventListener('click', (e) => sendCandidateToOdoo(c, e.currentTarget));
-  $('#cand-propose').addEventListener('click', () => startSuggestion({ name: c.nom, address: c.adresse, lat: c.lat, lng: c.lng }));
-  openPanel();
+    ${team ? `<details class="cand-contact"><summary>Équipe : personne de contact</summary>
+      <form data-contact>
+        <input name="nom" placeholder="Nom" value="${esc(c.contact_nom || '')}">
+        <input name="fonction" placeholder="Fonction (responsable énergie…)" value="${esc(c.contact_fonction || '')}">
+        <input name="tel" placeholder="Téléphone" value="${esc(c.contact_tel || '')}">
+        <input name="email" type="email" placeholder="E-mail" value="${esc(c.contact_email || '')}">
+        <button type="submit" class="btn secondary">Enregistrer</button>
+      </form></details>` : ''}
+    <p class="small" data-msg></p>
+  </article>`;
+}
+
+function renderCandList() {
+  const box = $('#cand-results');
+  if (!box || !state.search) return;
+  const rows = state.search.rows;
+  const total = rows.length ? Number(rows[0].total) : 0;
+  box.innerHTML = `<p class="small" style="margin:12px 0 8px"><strong>${!total ? 'Aucune entreprise ne correspond dans ce rayon.'
+    : total > rows.length ? `${rows.length} entreprises affichées sur ${total} (les plus grands sites). Réduisez le rayon ou ajoutez un critère pour voir les autres.`
+      : `${total} entreprise${total > 1 ? 's' : ''} dans ce rayon.`}</strong></p>
+    ${total ? '<p class="muted small" style="margin:0 0 8px">Estimations automatiques d’après l’activité et la toiture : des ordres de grandeur, pas des mesures.</p>' : ''}
+    ${rows.map(candCardHtml).join('')}`;
+  box.querySelectorAll('.cand-card').forEach((card) => {
+    const c = rows.find((r) => r.id === card.dataset.id);
+    $('[data-locate]', card).addEventListener('click', () => {
+      state.candPin?.hide();
+      state.candPin = state.map.addMarker({ lat: c.lat, lng: c.lng, zIndex: 25, title: c.nom, html: `<div class="pin cand selected"></div><span class="mk-label right">${esc(c.nom)}</span>` });
+      state.candPin.show();
+      box.querySelectorAll('.cand-card.active').forEach((x) => x.classList.remove('active'));
+      card.classList.add('active');
+    });
+    $('[data-odoo]', card).addEventListener('click', (e) => createOdooFiche(c, card, e.currentTarget));
+    $('[data-know]', card).addEventListener('click', () => {
+      const prefill = { name: c.nom, address: c.adresse, lat: c.lat, lng: c.lng };
+      clearRadius();
+      startSuggestion(prefill);
+    });
+    $('[data-contact]', card)?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target.elements, msg = $('[data-msg]', card);
+      const { error } = await sb.rpc('amb_candidate_set_contact', { p_place_id: c.id, p_nom: f.nom.value, p_fonction: f.fonction.value, p_tel: f.tel.value, p_email: f.email.value });
+      if (error) { console.error(error); msg.className = 'small error'; msg.textContent = 'La personne de contact n’a pas pu être enregistrée.'; return; }
+      Object.assign(c, { contact_nom: f.nom.value.trim() || null, contact_fonction: f.fonction.value.trim() || null, contact_tel: f.tel.value.trim() || null, contact_email: f.email.value.trim() || null });
+      renderCandList();
+    });
+  });
+}
+
+// Crée la société et l'opportunité dans Odoo (fonction zc-opportunite, côté serveur).
+// Équipe : la fiche est à son nom. Apporteur : elle entre dans les dossiers de sa société. Ambassadeur : l'équipe la voit dans son suivi.
+async function createOdooFiche(c, card, btn) {
+  const msg = $('[data-msg]', card);
+  if (!confirm(`Créer la fiche de « ${c.nom} » dans Odoo ?`)) return;
+  btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Création de la fiche dans Odoo…';
+  try {
+    const j = await zcCall(ZC_ODOO_URL, { place_id: c.id });
+    const role = state.user.role;
+    if (role === 'admin') {
+      const url = j.url || `https://raysun.odoo.com/odoo/crm/${Number(j.odoo_lead_id)}`;
+      msg.innerHTML = `${j.deja ? 'Cette entreprise était déjà dans Odoo.' : 'Fiche créée dans Odoo, à votre nom.'} <a href="${esc(url)}" target="_blank" rel="noopener">Ouvrir la fiche</a>. Elle est aussi listée dans le <a href="admin.html">suivi équipe</a>.`;
+    } else if (role === 'apporteur') {
+      const { error } = await sb.rpc('amb_candidate_to_dossier', { p_place_id: c.id });
+      if (error) throw new Error(/déjà confié/.test(error.message) ? 'cette entreprise est déjà suivie par un autre apporteur' : 'la fiche est créée dans Odoo, mais le dossier n’a pas pu être ajouté. Prévenez l’équipe RaYSun');
+      msg.innerHTML = 'Fiche créée dans Odoo. Elle est dans <a href="dossiers.html">vos dossiers</a>.';
+    } else {
+      msg.textContent = 'Fiche créée dans Odoo. L’équipe RaYSun la retrouve dans son suivi et reviendra vers vous.';
+    }
+    msg.className = 'small';
+    card.classList.add('done');
+    $('[data-know]', card).disabled = true;
+  } catch (e) {
+    console.error(e);
+    msg.className = 'small error'; msg.textContent = `La création a échoué : ${e.message}.`;
+    btn.disabled = false;
+  }
 }
 
 // --- Liste et filtres --------------------------------------------------------
@@ -419,7 +458,6 @@ document.querySelectorAll('.filters input').forEach((i) => i.addEventListener('c
 // --- Sélection ---------------------------------------------------------------
 
 function clearSelection() {
-  if (state.candSelected) { state.candMarkers.get(state.candSelected)?.setHtml(candHtml(false)); state.candSelected = null; }
   const lead = state.leads.find((l) => l.id === state.selectedId);
   if (lead) state.markers.get(lead.id)?.setHtml(leadHtml(lead, false));
   const s = state.suggestions.find((x) => x.id === state.selectedId);
@@ -1037,18 +1075,17 @@ async function start() {
   const [map] = await Promise.all([createMap($('#map')), loadData()]);
   state.map = map;
   map.onZoom(updateLabels);
-  map.onMove(() => { refreshCandidates().catch(console.error); refreshZonings().catch(console.error); });
+  map.onMove(() => { refreshZonings().catch(console.error); });
   $('#show-zonings').addEventListener('change', () => refreshZonings().catch(console.error));
   $('#zoning-import').hidden = state.user.role !== 'admin';
-  // Équipe : un clic sur un lieu de la carte Google (commerce, entreprise…) ouvre la recherche autour de ce lieu.
-  if (state.user.role === 'admin') {
-    map.onPoiClick(async (poi) => {
-      const adresse = await map.placeAddress(poi.placeId).catch(() => null);
-      selectMember({ kind: 'adresse', name: (adresse || 'Lieu choisi sur la carte').replace(/, Belgi(que|ë|um)$/i, ''), operation: 'Point de recherche', lat: poi.lat, lng: poi.lng, id: null });
-    });
-  }
-  // Équipe : recherche autour d'une adresse (localisée par Google, ou OpenStreetMap en secours).
-  $('#around-form').hidden = state.user.role !== 'admin';
+  // Un clic sur la carte (fond ou lieu Google : commerce, entreprise…) ouvre la recherche d'entreprises autour de ce point.
+  const short = (a) => a.replace(/, Belgi(que|ë|um)$/i, '');
+  map.onPoiClick(async (poi) => {
+    const adresse = await map.placeAddress(poi.placeId).catch(() => null);
+    openSearch({ kind: adresse ? 'adresse' : 'point', name: short(adresse || 'Lieu choisi sur la carte'), operation: 'Point de recherche', lat: poi.lat, lng: poi.lng, id: null });
+  });
+  map.onBackgroundClick((lat, lng) => openSearch({ kind: 'point', name: 'Point choisi sur la carte', operation: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng, id: null }));
+  // Recherche autour d'une adresse (localisée par Google, ou OpenStreetMap en secours).
   $('#around-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = $('#around-msg'), q = $('#around-address').value.trim();
@@ -1056,14 +1093,11 @@ async function start() {
     if (!q) return;
     const hit = await state.map.geocode(q).catch(() => null);
     if (!hit) { msg.textContent = 'Adresse introuvable. Précisez la commune ou le code postal.'; return; }
-    selectMember({ kind: 'adresse', name: (hit.address || q).replace(/, Belgi(que|ë|um)$/i, ''), operation: 'Point de recherche', lat: hit.lat, lng: hit.lng, id: null });
+    openSearch({ kind: 'adresse', name: short(hit.address || q), operation: 'Point de recherche', lat: hit.lat, lng: hit.lng, id: null });
   });
   $('#zoning-import-btn').addEventListener('click', (e) => importZonings(e.currentTarget));
-  $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
-  $('#cand-filter').addEventListener('change', () => refreshCandidates().catch(console.error));
   renderMarkers();
-  refreshCandidates().catch(console.error);
   refreshZonings().catch(console.error);
   updateLabels();
   const hash = decodeURIComponent(location.hash.slice(1));

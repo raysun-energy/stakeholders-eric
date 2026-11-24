@@ -6,6 +6,7 @@
 //   getBounds() -> { minLat, maxLat, minLng, maxLng } | null, onMove(cb) (après un déplacement ou un zoom),
 //   setShapes([{ id, name, geometry (GeoJSON) }]) : remplace les contours dessinés (zonings),
 //   setCircle({ lat, lng, radius (m) } | null) : cercle de recherche autour d'un point, cadré à l'écran,
+//   onBackgroundClick(cb | null) : clic sur le fond de carte hors placement d'un point -> (lat, lng),
 //   onPoiClick(cb | null) : clic sur un lieu de la carte Google (commerce, entreprise…) -> { lat, lng, placeId } ;
 //                           sans effet sur OpenStreetMap, qui n'a pas de lieux cliquables
 
@@ -53,11 +54,12 @@ async function createGoogleMap(el, { key, mapId }) {
     },
     streetViewControl: false, fullscreenControl: false, clickableIcons: false,
   });
-  let clickHandler = null, poiHandler = null;
+  let clickHandler = null, poiHandler = null, bgHandler = null;
   map.addListener('click', (e) => {
     // Clic sur un lieu Google : pas de bulle d'information standard, c'est la page qui décide quoi afficher.
     if (e.placeId && poiHandler && !clickHandler) { e.stop(); poiHandler({ lat: e.latLng.lat(), lng: e.latLng.lng(), placeId: e.placeId }); return; }
     if (clickHandler) clickHandler(e.latLng.lat(), e.latLng.lng());
+    else if (bgHandler) bgHandler(e.latLng.lat(), e.latLng.lng());
   });
 
   return {
@@ -88,6 +90,7 @@ async function createGoogleMap(el, { key, mapId }) {
     },
     onMove(cb) { map.addListener('idle', cb); },
     onPoiClick(cb) { poiHandler = cb; map.setOptions({ clickableIcons: !!cb }); },
+    onBackgroundClick(cb) { bgHandler = cb; },
     async placeAddress(placeId) {
       const { Geocoder } = await google.maps.importLibrary('geocoding');
       const { results } = await new Geocoder().geocode({ placeId }).catch(() => ({ results: [] }));
@@ -133,8 +136,8 @@ function createLeafletMap(el) {
     maxZoom: 19,
   });
   L.control.layers({ Plan: plan, Satellite: satellite }, null, { position: 'topleft', collapsed: false }).addTo(map);
-  let clickHandler = null;
-  map.on('click', (e) => clickHandler && clickHandler(e.latlng.lat, e.latlng.lng));
+  let clickHandler = null, bgHandler = null;
+  map.on('click', (e) => { const h = clickHandler || bgHandler; if (h) h(e.latlng.lat, e.latlng.lng); });
 
   return {
     kind: 'osm',
@@ -158,6 +161,7 @@ function createLeafletMap(el) {
     },
     onMove(cb) { map.on('moveend', cb); },
     onPoiClick() {},
+    onBackgroundClick(cb) { bgHandler = cb; },
     async placeAddress() { return null; },
     setCircle(c) {
       if (this._circle) { this._circle.remove(); this._circle = null; }
