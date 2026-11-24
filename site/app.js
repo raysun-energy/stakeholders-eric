@@ -97,8 +97,9 @@ const CAND_CATEGORIES = {
 const mwh = (kwh) => Math.round(kwh / 1000).toLocaleString('fr-BE');
 
 // Critères « gros consommateurs / gros producteurs potentiels », appliqués côté base (liste et export).
+// « Toiture vide » : grande toiture qu'aucun utilisateur n'a déclarée déjà équipée de panneaux.
 function candFilter(v = '') {
-  return { p_min_conso_kwh: v === 'conso' || v === 'both' ? 100000 : 0, p_min_toit_m2: v === 'prod' || v === 'both' ? 500 : 0 };
+  return { p_min_conso_kwh: v === 'conso' || v === 'both' ? 100000 : 0, p_min_toit_m2: v === 'prod' || v === 'both' || v === 'vide' ? 500 : 0, p_sans_panneaux: v === 'vide' };
 }
 
 // Export en bloc de toutes les entreprises à démarcher (CSV lisible par Excel), par pages de 1000.
@@ -109,7 +110,7 @@ async function exportCandidates(btn) {
     const rows = [];
     for (let offset = 0; ; offset += 1000) {
       btn.textContent = `Préparation… ${rows.length} entreprises`;
-      const { data, error } = await sb.rpc('amb_candidates_export', { p_offset: offset, ...candFilter() });
+      const { data, error } = await sb.rpc('amb_candidates_export', { p_offset: offset, p_min_conso_kwh: 0, p_min_toit_m2: 0 });
       if (error) throw error;
       rows.push(...data);
       if (data.length < 1000) break;
@@ -238,6 +239,7 @@ function openSearch(pt) {
             <option value="conso">Gros consommateurs (100 MWh/an et plus)</option>
             <option value="prod">Gros producteurs potentiels (toiture de 500 m² et plus)</option>
             <option value="both">Les deux</option>
+            <option value="vide">Toiture vide (500 m² et plus, sans panneaux connus)</option>
           </select>
         </label>
       </div>
@@ -303,6 +305,9 @@ function candCardHtml(c) {
     ${facts ? `<p class="small">${facts}</p>` : ''}
     <p class="small">${coords || '<span class="muted">Pas de téléphone ni d’e-mail connus.</span>'}</p>
     ${contact ? `<p class="small"><strong>Personne de contact :</strong> ${contact}</p>` : ''}
+    <p class="small panneaux">Panneaux solaires : <strong>${c.panneaux === 'oui' ? 'toiture déjà équipée' : c.panneaux === 'non' ? 'toiture vide' : 'non vérifié'}</strong>
+      ${c.panneaux !== 'non' ? '<button type="button" class="link" data-panneaux="non">Toiture vide</button>' : ''}
+      ${c.panneaux !== 'oui' ? '<button type="button" class="link" data-panneaux="oui">Déjà équipée</button>' : ''}</p>
     ${c.perdu_le ? `<p class="small" style="background:#FBE4E0;border-radius:10px;padding:6px 10px"><strong>Déjà tenté :</strong> un autre apporteur a travaillé ce prospect sans succès. Dossier classé perdu le ${new Date(c.perdu_le).toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>` : ''}
     <div class="cand-actions">
       ${callTo ? `<a class="btn secondary" href="tel:${esc(callTo.replace(/[^+\d]/g, ''))}">Appeler</a>` : ''}
@@ -342,6 +347,13 @@ function renderCandList() {
       card.classList.add('active');
     });
     $('[data-odoo]', card).addEventListener('click', (e) => createOdooFiche(c, card, e.currentTarget));
+    // Chacun peut indiquer, d'après la vue satellite ou une visite, si la toiture porte déjà des panneaux.
+    card.querySelectorAll('[data-panneaux]').forEach((b) => b.addEventListener('click', async () => {
+      const { error } = await sb.rpc('amb_candidate_set_panneaux', { p_place_id: c.id, p_value: b.dataset.panneaux });
+      if (error) { console.error(error); const m = $('[data-msg]', card); m.className = 'small error'; m.textContent = 'L’information n’a pas pu être enregistrée.'; return; }
+      c.panneaux = b.dataset.panneaux;
+      renderCandList();
+    }));
     $('[data-know]', card).addEventListener('click', () => {
       const prefill = { name: c.nom, address: c.adresse, lat: c.lat, lng: c.lng };
       clearRadius();

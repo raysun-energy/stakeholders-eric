@@ -255,3 +255,5 @@ dl { margin: 12px 0; }
 .support-files { display: block; margin-top: 10px; }
 .support-files input { margin-top: 4px; }
 #support-list { list-style: none; padding: 0; margin: 6px 0 0; }
+
+.cand-card .panneaux .link { margin-left: 8px; color: var(--link, #9A5415); text-decoration: underline; font-size: 12.5px; }

@@ -1,0 +1,4 @@
+-- Critère « Toiture vide » (appliqué le 24/11/2026). Aucune source ne dit si une toiture porte déjà des panneaux :
+-- chaque utilisateur peut l'indiquer sur une entreprise (colonnes zc_candidats.panneaux 'oui' / 'non', panneaux_par, panneaux_le ;
+-- fonction amb_candidate_set_panneaux). amb_candidates_around reçoit p_sans_panneaux (écarte les toitures déclarées équipées),
+-- renvoie la colonne panneaux et place en tête les toitures déclarées vides.
