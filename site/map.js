@@ -26,7 +26,7 @@ function loadGoogleScript(key) {
     window.__cwGoogleReady = resolve;
     // Clé refusée par Google (mauvaise clé, domaine non autorisé…) : on repasse sur OpenStreetMap.
     window.gm_authFailure = () => {
-      try { sessionStorage.setItem('cw-map-fallback', '1'); } catch {}
+      try { sessionStorage.setItem('cw-map-fallback', String(Date.now())); } catch {}
       location.reload();
     };
     const s = document.createElement('script');
@@ -188,7 +188,8 @@ function createLeafletMap(el) {
 async function createMap(el) {
   const cfg = window.CITYWATT_CONFIG || {};
   let fallback = false;
-  try { fallback = sessionStorage.getItem('cw-map-fallback') === '1'; } catch {}
+  // Le repli sur OpenStreetMap ne dure que dix minutes : Google est réessayé ensuite (clé corrigée entre-temps, par exemple).
+  try { fallback = Date.now() - Number(sessionStorage.getItem('cw-map-fallback') || 0) < 600000; } catch {}
   if (cfg.googleMapsApiKey && !fallback) {
     try {
       return await createGoogleMap(el, { key: cfg.googleMapsApiKey, mapId: cfg.googleMapId });

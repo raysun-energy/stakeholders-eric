@@ -242,7 +242,7 @@ function openSearch(pt) {
         </label>
       </div>
       <div class="admin-buttons" style="margin-top:10px"><button type="button" class="btn primary" id="member-search">Chercher les entreprises</button></div>
-      <p class="muted small" style="margin:8px 0 0">${team ? 'Équipe : la recherche analyse aussi les toitures des entreprises les plus prometteuses. Compter 10 à 30 secondes et quelques centimes d’API Google par recherche.' : 'La recherche prend quelques secondes.'}</p>
+      <p class="muted small" style="margin:8px 0 0">${team ? 'Équipe : la recherche analyse aussi les toitures des entreprises les plus prometteuses. Compter 10 à 30 secondes et quelques centimes d’API Google par recherche.' : state.user.role === 'apporteur' ? 'La recherche analyse aussi les toitures des entreprises les plus prometteuses. Compter 10 à 30 secondes.' : 'La recherche prend quelques secondes.'}</p>
       <p class="small" id="member-search-msg" style="margin:8px 0 0"></p>
     </div>
     <div id="cand-results"></div>`;
@@ -267,7 +267,7 @@ function openSearch(pt) {
       await zcCall(ZC_VOISINS_URL, { lat: pt.lat, lng: pt.lng, rayon_m: radius(), membre_id: pt.id ?? null, source: 'bce' });
     } catch (err) {
       console.error(err);
-      warn = ' La recherche de nouvelles entreprises a échoué ; voici celles déjà connues dans ce rayon.';
+      warn = ` La recherche de nouvelles entreprises a échoué${team ? ' (' + err.message + ')' : ''} ; voici celles déjà connues dans ce rayon.`;
     }
     try {
       await list();
