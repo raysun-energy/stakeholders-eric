@@ -9,7 +9,7 @@ const dateFr = (d) => d ? new Date(String(d).slice(0, 10) + 'T12:00:00').toLocal
 const periodLabel = (p) => p.includes('-T') ? `${p.slice(6)}${p.slice(6) === '1' ? 'er' : 'e'} trimestre ${p.slice(0, 4)}` : `Année ${p}`;
 const quarterOf = (d) => `${d.slice(0, 4)}-T${Math.floor((Number(d.slice(5, 7)) - 1) / 3) + 1}`;
 
-const state = { admin: false, org: null, orgs: [], stats: [], kind: 'trimestre', period: null, dossiers: [], invoices: [], messages: [], open: new Set(), unfolded: new Set() };
+const state = { admin: false, org: null, orgs: [], stats: [], kind: 'trimestre', period: null, dossiers: [], invoices: [], messages: [], open: new Set(), unfolded: new Set(), allDossiers: [] };
 
 function fail(e, msg = 'Une erreur est survenue. Rechargez la page.') {
   console.error(e);
@@ -29,7 +29,7 @@ async function loadSpace() {
     (org ? dq.eq('org_id', org) : dq).then(must),
     (org ? iq.eq('org_id', org) : iq).then(must),
   ]);
-  Object.assign(state, { stats: stats ?? [], dossiers: dossiers ?? [], invoices: invoices ?? [] });
+  Object.assign(state, { stats: stats ?? [], dossiers: dossiers ?? [], allDossiers: dossiers ?? [], invoices: invoices ?? [] });
   const ids = state.dossiers.map((d) => d.id);
   state.messages = ids.length ? (must(await sb.from('amb_dossier_messages').select('*').in('dossier_id', ids).order('created_at')) ?? []) : [];
   renderPeriods(); renderHero(); renderDossiers(); renderInvoices();
@@ -107,10 +107,28 @@ function fil(d) {
   </details>`;
 }
 
+// Dépôt de la facture du prospect dans le compartiment privé des factures (dossier de l'utilisateur).
+const FACTURE_TYPES = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif' };
+async function uploadFacture(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const type = file.type || FACTURE_TYPES[ext] || '';
+  if (!Object.values(FACTURE_TYPES).includes(type)) throw new Error('Facture invalide : envoyez un PDF ou une photo (JPG, PNG, HEIC).');
+  if (file.size > 10 * 1024 * 1024) throw new Error('Facture invalide : le fichier dépasse 10 Mo.');
+  const { data: { session } } = await sb.auth.getSession();
+  const path = `${session.user.id}/${crypto.randomUUID()}.${Object.keys(FACTURE_TYPES).find((k) => FACTURE_TYPES[k] === type)}`;
+  const { error } = await sb.storage.from('amb-invoices').upload(path, file, { contentType: type });
+  if (error) throw error;
+  return path;
+}
+
 function renderDossiers() {
   const orgName = (id) => state.orgs.find((o) => o.id === id)?.name ?? '';
   $('#dossiers-title').textContent = state.admin ? (state.org ? `Dossiers de ${orgName(state.org)}` : 'Tous les dossiers') : 'Vos dossiers';
   $('#dossiers-intro').hidden = state.admin;
+  const nLost = state.allDossiers.filter((d) => d.status === 'Perdu').length;
+  $('#lost-box').hidden = !state.admin || !nLost;
+  $('#lost-count').textContent = nLost;
+  state.dossiers = state.allDossiers.filter((d) => d.status !== 'Perdu' || (state.admin && $('#show-lost').checked));
   if (!state.dossiers.length) { $('#fold-all').hidden = true; $('#dossiers').innerHTML = '<p class="muted">Aucun dossier pour le moment.</p>'; return; }
   const kv = (k, v) => v ? `<div class="kv"><dt>${k}</dt><dd>${v}</dd></div>` : '';
   const foldable = state.dossiers.length >= 6;
@@ -123,6 +141,7 @@ function renderDossiers() {
     const contact = [d.contact_name, d.contact_function].filter(Boolean).map(esc).join(', ');
     const answered = d.answered_at ? `<p class="meta">${esc(d.status)} par ${esc(d.answered_by_name || 'un membre')} le ${esc(dateFr(d.answered_at))}${d.answer_note ? ` : « ${esc(d.answer_note)} »` : ''}</p>` : '';
     let actions = '';
+    const lostBtn = '<button class="btn secondary" data-lost>Dossier perdu</button>';
     if (state.admin) {
       // L'équipe suit les réponses ; c'est l'apporteur qui confirme.
     } else if (d.status === 'Proposé') {
@@ -130,13 +149,24 @@ function renderDossiers() {
         <div class="actions"><button class="btn primary" data-answer="Confirmé">Je confirme ce dossier</button>
         <button class="btn secondary" data-answer="Refusé">Je ne peux pas le prendre</button></div>`;
     } else if (d.status === 'Confirmé') {
-      actions = `<textarea rows="2" placeholder="Compte rendu de la visite (facultatif)" aria-label="Compte rendu de la visite"></textarea>
-        <div class="actions"><button class="btn primary" data-answer="Visite faite">La visite est faite</button></div>`;
+      // Fiche traitée : la facture d'électricité du prospect part chez RaYSun, qui prépare la simulation.
+      actions = `<label class="facture">Facture d'électricité du prospect (PDF ou photo)
+          <input type="file" data-invoice accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,application/pdf,image/*"></label>
+        <textarea rows="2" placeholder="Compte rendu pour RaYSun, ou raison si le dossier est perdu" aria-label="Compte rendu pour RaYSun"></textarea>
+        <div class="actions"><button class="btn primary" data-answer="Fiche traitée">Fiche traitée</button>${lostBtn}</div>
+        <p class="meta">« Fiche traitée » envoie la facture à RaYSun, qui prépare la simulation.</p>`;
+    } else if (d.status === 'Fiche traitée') {
+      actions = `<p class="meta">${d.invoice_path ? 'Facture transmise à RaYSun : la simulation est en préparation.' : 'Fiche transmise à RaYSun sans facture : envoyez-la dans la discussion dès que possible.'}</p>
+        <textarea rows="2" placeholder="Raison, si le dossier est perdu" aria-label="Raison de la perte"></textarea>
+        <div class="actions">${lostBtn}</div>`;
     }
+    const prev = d.previous_lost_at ? `<p class="msg warn"><b>Déjà tenté</b>Un autre apporteur a déjà travaillé ce prospect, sans succès : dossier classé perdu le ${esc(dateFr(d.previous_lost_at))}.</p>` : '';
     const admin = state.admin ? `<div class="actions">
         <button class="btn secondary" data-edit>Modifier</button>
         <button class="btn secondary" data-resend>Renvoyer l'e-mail</button>
-        ${d.status !== 'Clôturé' ? '<button class="btn secondary" data-close>Clôturer</button>' : ''}
+        ${d.invoice_path ? '<button class="btn secondary" data-open-invoice>Voir la facture</button>' : ''}
+        ${['Proposé', 'Confirmé', 'Fiche traitée'].includes(d.status) ? lostBtn : ''}
+        ${!['Clôturé', 'Perdu'].includes(d.status) ? '<button class="btn secondary" data-close>Clôturer</button>' : ''}
         <button class="link danger" data-delete>Supprimer</button></div>
         ${d.odoo_lead_id ? `<p class="meta"><a href="https://raysun.odoo.com/odoo/crm/${Number(d.odoo_lead_id)}" target="_blank" rel="noopener">Fiche Odoo</a></p>` : ''}
         <p class="meta">${d.notified_at ? `E-mail envoyé le ${esc(dateFr(d.notified_at))}` : 'E-mail pas encore envoyé'}</p>` : '';
@@ -155,6 +185,7 @@ function renderDossiers() {
         ${kv('E-mail', d.contact_email ? `<a href="mailto:${esc(d.contact_email)}">${esc(d.contact_email)}</a>` : '')}
         ${kv('Disponibilité', dispo)}
       </dl>
+      ${prev}
       ${d.message ? `<p class="msg"><b>Message de RaYSun</b>${esc(d.message)}</p>` : ''}
       ${answered}${actions}${admin}
       ${fil(d)}
@@ -166,7 +197,25 @@ $('#dossiers').addEventListener('click', async (e) => {
   const btn = e.target.closest('button'); if (!btn) return;
   const card = btn.closest('.dossier'), id = card.dataset.id;
   try {
-    if (btn.dataset.answer) {
+    if (btn.dataset.answer === 'Fiche traitée') {
+      const file = $('[data-invoice]', card)?.files?.[0];
+      if (!file && !confirm('Sans facture, RaYSun ne peut pas lancer la simulation. Marquer la fiche comme traitée quand même ?')) return;
+      btn.disabled = true;
+      const path = file ? await uploadFacture(file) : null;
+      must(await sb.rpc('amb_dossier_answer', { p_id: id, p_status: 'Fiche traitée', p_note: $('textarea', card)?.value || null, p_invoice: path }));
+    } else if ('lost' in btn.dataset) {
+      // Équipe : pas de champ de saisie sur la fiche, la raison est demandée ici.
+      const reason = (state.admin ? prompt('Raison de la perte (visible par l’équipe et notée dans Odoo) :') : $('textarea', card)?.value)?.trim();
+      if (!reason) { if (!state.admin) { $('textarea', card)?.focus(); $('#error').textContent = 'Indiquez la raison dans le champ de la fiche avant de classer le dossier perdu.'; } return; }
+      if (!confirm(`Classer « ${card.querySelector('h3').textContent} » comme perdu ? La fiche Odoo sera marquée perdue et le dossier disparaîtra de la plateforme.`)) return;
+      btn.disabled = true;
+      must(await sb.rpc('amb_dossier_answer', { p_id: id, p_status: 'Perdu', p_note: reason }));
+    } else if ('openInvoice' in btn.dataset) {
+      const d = state.dossiers.find((x) => x.id === id);
+      const { data, error } = await sb.storage.from('amb-invoices').createSignedUrl(d.invoice_path, 120);
+      if (error) { $('#error').textContent = 'La facture n’est plus disponible ici (supprimée après 10 jours). Elle reste jointe à l’e-mail et à la fiche Odoo.'; return; }
+      window.open(data.signedUrl, '_blank', 'noopener'); return;
+    } else if (btn.dataset.answer) {
       btn.disabled = true;
       must(await sb.rpc('amb_dossier_answer', { p_id: id, p_status: btn.dataset.answer, p_note: $('textarea', card)?.value || null }));
     } else if ('fold' in btn.dataset) {
@@ -186,6 +235,7 @@ $('#dossiers').addEventListener('click', async (e) => {
   } catch (err) { btn.disabled = false; fail(err, 'Action impossible pour le moment.'); }
 });
 
+$('#show-lost').addEventListener('change', renderDossiers);
 $('#fold-all').addEventListener('click', () => {
   const allOpen = state.dossiers.every((d) => state.unfolded.has(d.id));
   state.unfolded = allOpen ? new Set() : new Set(state.dossiers.map((d) => d.id));

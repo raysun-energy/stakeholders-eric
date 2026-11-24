@@ -303,6 +303,7 @@ function candCardHtml(c) {
     ${facts ? `<p class="small">${facts}</p>` : ''}
     <p class="small">${coords || '<span class="muted">Pas de téléphone ni d’e-mail connus.</span>'}</p>
     ${contact ? `<p class="small"><strong>Personne de contact :</strong> ${contact}</p>` : ''}
+    ${c.perdu_le ? `<p class="small" style="background:#FBE4E0;border-radius:10px;padding:6px 10px"><strong>Déjà tenté :</strong> un autre apporteur a travaillé ce prospect sans succès. Dossier classé perdu le ${new Date(c.perdu_le).toLocaleDateString('fr-BE', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>` : ''}
     <div class="cand-actions">
       ${callTo ? `<a class="btn secondary" href="tel:${esc(callTo.replace(/[^+\d]/g, ''))}">Appeler</a>` : ''}
       ${mailTo ? `<a class="btn secondary" href="mailto:${esc(mailTo)}">E-mail</a>` : ''}
@@ -361,7 +362,8 @@ function renderCandList() {
 // Équipe : la fiche est à son nom. Apporteur : elle entre dans les dossiers de sa société. Ambassadeur : l'équipe la voit dans son suivi.
 async function createOdooFiche(c, card, btn) {
   const msg = $('[data-msg]', card);
-  if (!confirm(`Créer la fiche de « ${c.nom} » dans Odoo${state.user.role === 'apporteur' ? ' et l’ajouter à vos dossiers' : ''} ?`)) return;
+  const deja = c.perdu_le ? `Un autre apporteur a déjà tenté ce prospect, sans succès (dossier classé perdu le ${new Date(c.perdu_le).toLocaleDateString('fr-BE')}).\n\n` : '';
+  if (!confirm(`${deja}Créer la fiche de « ${c.nom} » dans Odoo${state.user.role === 'apporteur' ? ' et l’ajouter à vos dossiers' : ''} ?`)) return;
   btn.disabled = true; msg.className = 'small muted'; msg.textContent = 'Création de la fiche dans Odoo…';
   try {
     const j = await zcCall(ZC_ODOO_URL, { place_id: c.id });
@@ -1004,7 +1006,7 @@ async function loadData() {
   state.members = members.data;
   // Dossiers des apporteurs : l'équipe les voit tous, une société voit les siens (règles RLS) ; non bloquant.
   if (['admin', 'apporteur'].includes(state.user.role)) {
-    const { data } = await sb.from('amb_dossiers').select('id, prospect, lat, lng, status').not('lat', 'is', null).neq('status', 'Clôturé');
+    const { data } = await sb.from('amb_dossiers').select('id, prospect, lat, lng, status').not('lat', 'is', null).not('status', 'in', '("Clôturé","Perdu")');
     state.dossiers = data ?? [];
     $('#dossiers-filter').hidden = false;
     $('#dossiers-count').textContent = state.dossiers.length;

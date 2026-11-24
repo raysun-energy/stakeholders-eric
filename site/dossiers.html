@@ -69,7 +69,10 @@
     .st-Proposé { background: #FCF0D9; color: #8A5206; }
     .st-Confirmé { background: #E3F2E9; color: #1E7F4E; }
     .st-Refusé { background: #FBE4E0; color: #B83A2C; }
-    .st-Visite { background: #E3EDF7; color: #2E5E8C; }
+    .st-Visite, .st-Fiche { background: #E3EDF7; color: #2E5E8C; }
+    .st-Perdu { background: #FBE4E0; color: #B83A2C; }
+    .dossier .msg.warn { background: #FBE4E0; } .dossier .msg.warn b { color: #B83A2C; }
+    .dossier .facture { font-size: 13px; color: var(--muted); display: block; } .dossier .facture input { display: block; margin-top: 4px; font-size: 13px; }
     .st-Clôturé { background: var(--border); color: var(--muted); }
 
     .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
@@ -184,8 +187,8 @@
         </table></div>
       </div>
 
-      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><h2 id="dossiers-title">Vos dossiers</h2><button type="button" class="link" id="fold-all" hidden>Tout déplier</button></div>
-      <p class="lead-in" id="dossiers-intro">Les dossiers que RaYSun vous confie. Confirmez chaque dossier pour nous dire que vous le prenez en charge.</p>
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><h2 id="dossiers-title">Vos dossiers</h2><button type="button" class="link" id="fold-all" hidden>Tout déplier</button><label id="lost-box" hidden style="font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center"><input type="checkbox" id="show-lost" style="width:auto"> Afficher les dossiers perdus (<span id="lost-count">0</span>)</label></div>
+      <p class="lead-in" id="dossiers-intro">Vos prospects et les dossiers que RaYSun vous confie. Confirmez un dossier pour le prendre en charge, puis cliquez « Fiche traitée » quand vous avez la facture du prospect.</p>
       <div class="cards" id="dossiers"></div>
 
       <h2>Facturation</h2>
