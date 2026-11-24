@@ -1,5 +1,6 @@
 // Recherche dans Odoo pour l'espace apporteurs (lecture seule, réservée à l'équipe) :
 //   { type: 'leads', q }     -> opportunités et pistes du CRM (prospect, contact, adresse)
+//   { type: 'lead', id }      -> une fiche du CRM par son numéro (lien collé), complétée par la société liée
 //   { type: 'partners', q }  -> sociétés des fiches contact, avec leurs personnes qui ont une adresse e-mail
 // L'appelant doit être connecté et avoir le rôle admin (vérifié avec son propre jeton).
 // Secrets : ODOO_USERNAME, ODOO_API_KEY (les mêmes que amb-notify) ; optionnels : ODOO_URL, ODOO_DB.
@@ -50,9 +51,10 @@ Deno.serve(async (req) => {
     const { data: role } = await asUser.rpc('amb_role');
     if (role !== 'admin') return json({ error: 'Réservé à l’équipe' }, 403);
 
-    const { type, q } = await req.json().catch(() => ({}));
+    const { type, q, id } = await req.json().catch(() => ({}));
     const terme = String(q ?? '').trim().slice(0, 80);
-    if (!['leads', 'partners'].includes(type) || terme.length < 2) return json({ results: [] });
+    const leadId = type === 'lead' && Number.isInteger(id) && id > 0 ? id : null;
+    if (!leadId && (!['leads', 'partners'].includes(type) || terme.length < 2)) return json({ results: [] });
 
     const login = Deno.env.get('ODOO_USERNAME'), key = Deno.env.get('ODOO_API_KEY');
     if (!login || !key) throw new Error('Secrets ODOO_USERNAME / ODOO_API_KEY manquants');
@@ -62,11 +64,21 @@ Deno.serve(async (req) => {
     const kw = (model: string, method: string, a: unknown[], k: unknown = {}) =>
       odoo('object', 'execute_kw', [db, uid, key, model, method, a, k]);
 
-    if (type === 'leads') {
+    if (type === 'leads' || leadId) {
       const rows = await kw('crm.lead', 'search_read',
-        [['|', '|', ['name', 'ilike', terme], ['partner_name', 'ilike', terme], ['contact_name', 'ilike', terme]]],
+        [leadId ? [['id', '=', leadId]] : ['|', '|', ['name', 'ilike', terme], ['partner_name', 'ilike', terme], ['contact_name', 'ilike', terme]]],
         { fields: ['name', 'partner_name', 'contact_name', 'function', 'phone', 'email_from', 'street', 'zip', 'city', 'stage_id', 'partner_id'],
           limit: 8, order: 'write_date desc' });
+      // Fiche lue par son lien : l'adresse, le téléphone et l'e-mail manquants sont repris de la société liée.
+      if (leadId && rows[0] && Array.isArray(rows[0].partner_id)) {
+        const [p] = await kw('res.partner', 'read', [[rows[0].partner_id[0]]], { fields: ['street', 'zip', 'city', 'phone', 'email'] });
+        const r = rows[0];
+        if (p) {
+          if (!txt(r.street) && !txt(r.city)) Object.assign(r, { street: p.street, zip: p.zip, city: p.city });
+          if (!txt(r.phone)) r.phone = p.phone;
+          if (!txt(r.email_from)) r.email_from = p.email;
+        }
+      }
       return json({ results: rows.map((r: Record<string, any>) => ({
         id: r.id, name: txt(r.name), company: txt(r.partner_name) ?? (Array.isArray(r.partner_id) ? r.partner_id[1] : null),
         contact_name: txt(r.contact_name), contact_function: txt(r.function),

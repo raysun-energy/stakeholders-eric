@@ -79,6 +79,11 @@
     th { background: var(--bg); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     tr.total td { font-weight: 700; background: var(--bg); }
+    tr.grp { cursor: pointer; } tr.grp td { font-weight: 700; background: var(--bg); }
+    tr.grp-q td:first-child { padding-left: 26px; } tr.grp-q td { font-weight: 600; background: transparent; }
+    tr.grp small { display: inline; font-weight: 400; color: var(--muted); margin-left: 6px; } tr.grp .chev { display: inline-block; width: 14px; color: var(--accent); }
+    tr.grp:hover td, tr.grp:focus-visible td { background: var(--accent-soft); } td.mois { padding-left: 46px; }
+    .dossier, .dossier h3, .dossier .msg, .dossier dd, .dossier .meta { overflow-wrap: anywhere; min-width: 0; }
     td small { color: var(--muted); display: block; }
     .link.calc { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
     tr.detail > td { background: var(--bg); padding: 14px; }
@@ -192,10 +197,10 @@
       <h2>Gestion par l'équipe</h2>
       <p class="lead-in">Visible uniquement par l'équipe RaYSun.</p>
 
-      <h3>Affecter un dossier à une société</h3>
+      <h3 id="dossier-form-title">Affecter un dossier à une société</h3>
       <form class="form" id="dossier-form">
         <label>Société <select name="org_id" required></select></label>
-        <label class="wide">Prospect <input name="prospect" required autocomplete="off" placeholder="Tapez un nom : les fiches du CRM Odoo sont proposées"></label>
+        <label class="wide">Prospect <input name="prospect" required autocomplete="off" placeholder="Tapez un nom, ou collez le lien de la fiche Odoo"></label>
         <input type="hidden" name="odoo_lead_id">
         <label>Région <select name="region"><option>Bruxelles</option><option>Wallonie</option><option>Flandre</option></select></label>
         <label class="wide">Adresse <input name="address" autocomplete="off" placeholder="Commencez à taper : Google propose les adresses"></label>
@@ -207,7 +212,8 @@
         <label>Disponible le <input name="available_on" type="date"></label>
         <label class="wide">Précision sur la disponibilité <input name="available_note" placeholder="Ex. le matin, prévenir la veille"></label>
         <label class="full">Message pour l'apporteur <textarea name="message" rows="3" placeholder="Ce que vous voulez lui dire : contexte, points d'attention, ce que vous attendez de la visite"></textarea></label>
-        <button class="btn primary full" type="submit">Affecter et envoyer l'e-mail</button>
+        <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit" style="width:auto">Affecter et envoyer l'e-mail</button>
+          <button class="btn secondary" type="button" id="dossier-cancel" hidden>Annuler la modification</button></div>
         <p class="ok-msg full" id="dossier-msg"></p>
       </form>
 

@@ -33,6 +33,8 @@ async function loadSpace() {
   const ids = state.dossiers.map((d) => d.id);
   state.messages = ids.length ? (must(await sb.from('amb_dossier_messages').select('*').in('dossier_id', ids).order('created_at')) ?? []) : [];
   renderPeriods(); renderHero(); renderDossiers(); renderInvoices();
+  // Après l'affichage : complète les dossiers dont le nom est un lien Odoo, puis recharge une fois.
+  repairLinkedDossiers().then((changed) => { if (changed) loadSpace().catch(fail); }).catch(console.error);
 }
 
 function periodsOfKind() { return state.stats.filter((s) => s.kind === state.kind); }
@@ -127,6 +129,7 @@ function renderDossiers() {
         <div class="actions"><button class="btn primary" data-answer="Visite faite">La visite est faite</button></div>`;
     }
     const admin = state.admin ? `<div class="actions">
+        <button class="btn secondary" data-edit>Modifier</button>
         <button class="btn secondary" data-resend>Renvoyer l'e-mail</button>
         ${d.status !== 'Clôturé' ? '<button class="btn secondary" data-close>Clôturer</button>' : ''}
         <button class="link danger" data-delete>Supprimer</button></div>
@@ -158,6 +161,8 @@ $('#dossiers').addEventListener('click', async (e) => {
     if (btn.dataset.answer) {
       btn.disabled = true;
       must(await sb.rpc('amb_dossier_answer', { p_id: id, p_status: btn.dataset.answer, p_note: $('textarea', card)?.value || null }));
+    } else if ('edit' in btn.dataset) {
+      startEdit(state.dossiers.find((d) => d.id === id)); return;
     } else if ('resend' in btn.dataset) {
       must(await sb.rpc('amb_dossier_resend', { p_id: id }));
     } else if ('close' in btn.dataset) {
@@ -191,27 +196,46 @@ $('#dossiers').addEventListener('submit', async (e) => {
 
 // ---- Facturation --------------------------------------------------------------------
 
+// Facturation pliable : une ligne par année, puis par trimestre, puis les mois. Le dernier trimestre est ouvert au départ.
+const invOpen = new Set();
+let invInit = false;
 function renderInvoices() {
   const orgName = (id) => state.orgs.find((o) => o.id === id)?.name ?? '';
   $('#inv-actions').hidden = !state.admin;
   if (!state.invoices.length) { $('#invoices').innerHTML = '<tr><td colspan="5" class="muted">Aucune facture enregistrée.</td></tr>'; return; }
-  const rows = [];
-  let year = null, quarter = null, qSum = 0, ySum = 0;
-  const flushQ = () => { if (quarter) rows.push(`<tr class="total"><td colspan="3">Total ${esc(periodLabel(quarter))}</td><td class="num">${esc(euro2(qSum))}</td>${state.admin ? '<td></td>' : ''}</tr>`); qSum = 0; };
-  const flushY = () => { if (year) rows.push(`<tr class="total"><td colspan="3">Total année ${esc(year)}</td><td class="num">${esc(euro2(ySum))}</td>${state.admin ? '<td></td>' : ''}</tr>`); ySum = 0; };
+  const years = new Map();   // année -> trimestre -> factures (ordre du plus récent au plus ancien)
   for (const i of state.invoices) {
-    const q = quarterOf(i.invoice_date), y = i.invoice_date.slice(0, 4);
-    if (q !== quarter) { flushQ(); if (y !== year) { flushY(); year = y; } quarter = q; }
-    qSum += Number(i.amount_eur); ySum += Number(i.amount_eur);
-    const mois = i.period_month ? new Date(i.period_month + '-15').toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : dateFr(i.invoice_date);
-    rows.push(`<tr data-id="${esc(i.id)}" data-org="${esc(i.org_id)}" data-month="${esc(i.period_month ?? '')}"><td>${esc(mois)}</td>
-      <td>${esc(i.reference)}${state.admin && !state.org ? `<small>${esc(orgName(i.org_id))}</small>` : ''}</td>
-      <td>${i.period_month ? `<button type="button" class="link calc" data-detail aria-expanded="false">Voir le calcul et les clients</button>` : esc(i.label)}</td><td class="num">${esc(euro2(i.amount_eur))}</td>
-      ${state.admin ? `<td>${i.source === 'outil-fees' ? '' : '<button class="link danger" data-del-invoice>Supprimer</button>'}</td>` : ''}</tr>`);
+    const y = i.invoice_date.slice(0, 4), q = quarterOf(i.invoice_date);
+    if (!years.has(y)) years.set(y, new Map());
+    if (!years.get(y).has(q)) years.get(y).set(q, []);
+    years.get(y).get(q).push(i);
   }
-  flushQ(); flushY();
+  if (!invInit) { invInit = true; const y = [...years.keys()][0]; invOpen.add(y); invOpen.add([...years.get(y).keys()][0]); }
+  const sum = (xs) => xs.reduce((a, x) => a + Number(x.amount_eur), 0);
+  const extra = state.admin ? '<td></td>' : '';
+  const head = (key, cls, label, total, n) => `<tr class="grp ${cls}" data-grp="${esc(key)}" tabindex="0" role="button" aria-expanded="${invOpen.has(key)}">
+      <td colspan="3"><span class="chev">${invOpen.has(key) ? '▾' : '▸'}</span> ${esc(label)} <small>${n} mois</small></td><td class="num">${esc(euro2(total))}</td>${extra}</tr>`;
+  const rows = [];
+  for (const [y, quarters] of years) {
+    const all = [...quarters.values()].flat();
+    rows.push(head(y, 'grp-y', `Année ${y}`, sum(all), new Set(all.map((i) => i.period_month || i.invoice_date.slice(0, 7))).size));
+    if (!invOpen.has(y)) continue;
+    for (const [q, list] of quarters) {
+      rows.push(head(q, 'grp-q', periodLabel(q), sum(list), new Set(list.map((i) => i.period_month || i.invoice_date.slice(0, 7))).size));
+      if (!invOpen.has(q)) continue;
+      for (const i of list) {
+        const mois = i.period_month ? new Date(i.period_month + '-15').toLocaleDateString('fr-BE', { month: 'long', year: 'numeric' }) : dateFr(i.invoice_date);
+        rows.push(`<tr data-id="${esc(i.id)}" data-org="${esc(i.org_id)}" data-month="${esc(i.period_month ?? '')}"><td class="mois">${esc(mois)}</td>
+          <td>${esc(i.reference)}${state.admin && !state.org ? `<small>${esc(orgName(i.org_id))}</small>` : ''}</td>
+          <td>${i.period_month ? `<button type="button" class="link calc" data-detail aria-expanded="false">Voir le calcul et les clients</button>` : esc(i.label)}</td><td class="num">${esc(euro2(i.amount_eur))}</td>
+          ${state.admin ? `<td>${i.source === 'outil-fees' ? '' : '<button class="link danger" data-del-invoice>Supprimer</button>'}</td>` : ''}</tr>`);
+      }
+    }
+  }
   $('#invoices').innerHTML = rows.join('');
 }
+function toggleInvGroup(tr) { const k = tr.dataset.grp; invOpen.has(k) ? invOpen.delete(k) : invOpen.add(k); renderInvoices(); }
+$('#invoices').addEventListener('keydown', (e) => { const g = e.target.closest('tr.grp'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleInvGroup(g); } });
 
 // Détail du calcul d'un mois : une ligne par client (EAN), regroupées par opération de partage.
 function detailHtml(lines) {
@@ -237,6 +261,8 @@ function detailHtml(lines) {
 }
 
 $('#invoices').addEventListener('click', async (e) => {
+  const grp = e.target.closest('tr.grp');
+  if (grp) { toggleInvGroup(grp); return; }
   const det = e.target.closest('[data-detail]');
   if (det) {
     const tr = det.closest('tr'), next = tr.nextElementSibling;
@@ -330,6 +356,60 @@ function suggest(input, { chercher, ligne, choisir, min = 3 }) {
   input.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 }
 
+// Lien d'une fiche du CRM Odoo (https://raysun.odoo.com/odoo/crm/1224, ou ancien format ...id=1224&model=crm.lead).
+const odooLeadId = (text) => { const m = String(text ?? '').match(/odoo\.com\/\S*?crm\/(\d+)/i) || String(text ?? '').match(/odoo\.com\/\S*[#?&]id=(\d+)\S*model=crm\.lead/i); return m ? Number(m[1]) : null; };
+async function odooLead(id) {
+  const { data, error } = await sb.functions.invoke('amb-odoo-search', { body: { type: 'lead', id } });
+  if (error || data?.error) return null;
+  return data.results?.[0] ?? null;
+}
+// Champs d'un dossier d'après une fiche Odoo (nom de la société, contact, adresse, région).
+function leadFields(l) {
+  const v = { prospect: l.company || l.name || '', odoo_lead_id: l.id };
+  for (const k of ['contact_name', 'contact_function', 'contact_phone', 'contact_email', 'address']) if (l[k]) v[k] = l[k];
+  const r = regionOf(l.zip || l.address); if (r) v.region = r;
+  return v;
+}
+// Équipe : les dossiers créés avec un lien Odoo à la place du nom sont complétés d'après la fiche (une seule tentative par dossier).
+const repaired = new Set();
+async function repairLinkedDossiers() {
+  if (!state.admin) return false;
+  let changed = false;
+  for (const d of state.dossiers) {
+    const id = odooLeadId(d.prospect);
+    if (!id || repaired.has(d.id)) continue;
+    repaired.add(d.id);
+    const l = await odooLead(id);
+    if (!l) continue;
+    const f = leadFields(l), patch = { prospect: f.prospect, odoo_lead_id: id };
+    for (const k of ['contact_name', 'contact_function', 'contact_phone', 'contact_email', 'address']) if (!d[k] && f[k]) patch[k] = f[k];
+    if (patch.address) Object.assign(patch, await geocodeAddress(patch.address));
+    const { error } = await sb.from('amb_dossiers').update(patch).eq('id', d.id);
+    if (error) console.error(error); else changed = true;
+  }
+  return changed;
+}
+
+// Équipe : modifier un dossier déjà affecté, dans le formulaire du bas (aucun e-mail n'est renvoyé).
+function startEdit(d) {
+  const f = $('#dossier-form');
+  state.editing = d.id;
+  for (const k of ['org_id', 'prospect', 'odoo_lead_id', 'region', 'address', 'project', 'contact_name', 'contact_function', 'contact_phone', 'contact_email', 'available_on', 'available_note', 'message']) f[k].value = d[k] ?? '';
+  $('#dossier-form-title').textContent = `Modifier le dossier « ${d.prospect} »`;
+  $('button[type=submit]', f).textContent = 'Enregistrer les modifications';
+  $('#dossier-cancel').hidden = false;
+  $('#dossier-msg').textContent = 'Aucun e-mail n’est renvoyé à l’apporteur. Pour le prévenir, utilisez « Renvoyer l’e-mail » ou la discussion.';
+  $('#dossier-form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function stopEdit() {
+  const f = $('#dossier-form'), org = f.org_id.value;
+  state.editing = null;
+  f.reset(); f.org_id.value = org; f.odoo_lead_id.value = '';
+  $('#dossier-form-title').textContent = 'Affecter un dossier à une société';
+  $('button[type=submit]', f).textContent = 'Affecter et envoyer l\'e-mail';
+  $('#dossier-cancel').hidden = true;
+}
+
 async function odooSearch(type, q) {
   const { data, error } = await sb.functions.invoke('amb-odoo-search', { body: { type, q } });
   if (error || data?.error) return { erreur: 'Recherche Odoo indisponible pour le moment.' };
@@ -411,7 +491,23 @@ function wireAdmin() {
       const r = regionOf(l.zip || l.address); if (r) df.region.value = r;
     },
   });
-  df.prospect.addEventListener('input', () => { df.odoo_lead_id.value = ''; });
+  // Un lien de fiche Odoo collé ici est remplacé par le nom de la fiche, avec son adresse, son téléphone et son e-mail.
+  let linkSeq = 0;
+  df.prospect.addEventListener('input', async () => {
+    df.odoo_lead_id.value = '';
+    const id = odooLeadId(df.prospect.value);
+    if (!id) return;
+    const n = ++linkSeq, msg = $('#dossier-msg');
+    msg.textContent = 'Lecture de la fiche Odoo…';
+    const l = await odooLead(id);
+    if (n !== linkSeq) return;
+    if (!l) { msg.textContent = 'Fiche Odoo introuvable pour ce lien. Tapez le nom du prospect.'; return; }
+    const v = leadFields(l);
+    for (const [k, val] of Object.entries(v)) df[k].value = val;
+    if (l.name && l.company && !df.project.value) df.project.value = l.name;
+    msg.textContent = 'Fiche Odoo reprise : vérifiez les champs avant d’enregistrer.';
+  });
+  $('#dossier-cancel').addEventListener('click', stopEdit);
   // Adresse : propositions Google
   suggest(df.address, {
     chercher: addressSearch,
@@ -465,6 +561,13 @@ function wireAdmin() {
     try {
       if (v.odoo_lead_id) v.odoo_lead_id = Number(v.odoo_lead_id);
       Object.assign(v, await geocodeAddress(v.address));   // position sur la carte
+      if (state.editing) {
+        must(await sb.from('amb_dossiers').update(v).eq('id', state.editing));
+        stopEdit();
+        msg.textContent = 'Dossier modifié.';
+        await loadSpace();
+        return;
+      }
       must(await sb.from('amb_dossiers').insert(v));
       f.reset(); f.org_id.value = v.org_id; f.odoo_lead_id.value = '';
       msg.textContent = org.people.length ? `Dossier affecté. E-mail envoyé à ${org.people.map((p) => p.email).join(', ')}.` : 'Dossier créé, sans e-mail.';
