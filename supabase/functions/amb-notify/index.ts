@@ -14,7 +14,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const SITE = 'https://citywatt-ambassadeurs.netlify.app';
 const ODOO_URL = Deno.env.get('ODOO_URL') ?? 'https://raysun.odoo.com';
 const NOTIFY_EMAIL = Deno.env.get('NOTIFY_EMAIL') ?? 'eric.rw@raysun.solar';
-const ROLES: Record<string, string> = { shareholder: 'Actionnaire', ambassador: 'Ambassadeur', admin: 'Équipe' };
+const ROLES: Record<string, string> = { shareholder: 'Actionnaire', ambassador: 'Ambassadeur', apporteur: 'Apporteur d’affaires', admin: 'Équipe' };
 
 const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -107,6 +107,15 @@ async function compose(tableName: string, r: Record<string, any>) {
       ]) + `<p><a href="${SITE}/admin.html">Ouvrir le suivi équipe</a></p>`,
     };
   }
+  if (tableName === 'amb_support') {
+    const role = r.author_id ? await roleOf(r.author_id) : null;
+    return {
+      subject: `[CityWatt] Support, ${r.kind === 'Bug' ? 'bug signalé' : 'demande d’amélioration'} par ${r.author_name ?? 'un utilisateur'}`,
+      html: `<p><b>${esc(r.author_name)}</b>${role ? ` (${esc(role)})` : ''} ${r.kind === 'Bug' ? 'signale un bug' : 'demande une amélioration'}.</p>`
+        + table([['Page', r.page]]) + `<p style="white-space:pre-wrap">${esc(r.message)}</p>`
+        + `<p><a href="${SITE}/admin.html">Ouvrir le suivi équipe</a></p>`,
+    };
+  }
   if (tableName === 'amb_suggestions') {
     const who = `${r.author_name} (${await roleOf(r.author_id)})`;
     return {
@@ -129,7 +138,7 @@ async function compose(tableName: string, r: Record<string, any>) {
   };
 }
 
-const TABLES = ['amb_contributions', 'amb_suggestions', 'amb_access_requests'];
+const TABLES = ['amb_contributions', 'amb_suggestions', 'amb_access_requests', 'amb_support'];
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });

@@ -1078,6 +1078,13 @@ async function start() {
   map.onMove(() => { refreshZonings().catch(console.error); });
   $('#show-zonings').addEventListener('change', () => refreshZonings().catch(console.error));
   $('#zoning-import').hidden = state.user.role !== 'admin';
+  // Équipe : si Google a refusé la clé, la carte est sur OpenStreetMap ; on affiche la raison donnée par Google.
+  try {
+    const refus = Date.now() - Number(sessionStorage.getItem('cw-map-fallback') || 0) < 600000;
+    if (refus && state.user.role === 'admin') {
+      $('.intro').insertAdjacentHTML('beforeend', `<p class="map-notice">Équipe : la carte Google a été refusée pour ${esc(location.origin)} (raison donnée par Google : ${esc(sessionStorage.getItem('cw-map-reason') || 'non précisée')}). La carte OpenStreetMap la remplace ; Google sera réessayé dans dix minutes.</p>`);
+    }
+  } catch {}
   // Un clic sur la carte (fond ou lieu Google : commerce, entreprise…) ouvre la recherche d'entreprises autour de ce point.
   const short = (a) => a.replace(/, Belgi(que|ë|um)$/i, '');
   map.onPoiClick(async (poi) => {

@@ -105,6 +105,15 @@
       </table>
     </div>
 
+    <div class="toolbar"><h2>Support : bugs et demandes d’amélioration</h2>
+      <label class="show-done"><input type="checkbox" id="show-done-support"> Afficher les traités (<span id="done-count-support">0</span>)</label></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>De</th><th>Page</th><th>Message</th><th>Suivi</th></tr></thead>
+        <tbody id="support-rows"></tbody>
+      </table>
+    </div>
+
     <div class="toolbar"><h2>Fiches Odoo créées depuis la carte</h2></div>
     <p class="muted small">Entreprises envoyées dans Odoo depuis la recherche de la carte. Celles d’un apporteur d’affaires sont aussi dans ses dossiers.</p>
     <div class="table-wrap">
@@ -151,6 +160,7 @@
   <script src="vendor/supabase.js"></script>
   <script src="config.js"></script>
   <script src="auth.js"></script>
+  <script src="support.js"></script>
   <script>
     const FOLLOW_UP = ['Nouveau', 'En cours', 'Rendez-vous obtenu', 'Sans suite', 'Traité'];
     // « Traité » : masqué des tableaux (sauf case cochée) et de la carte ; compte dans le suivi commercial.
@@ -419,6 +429,34 @@
 
     const SUGG_FOLLOW_UP = ['Nouveau', 'À étudier', 'Retenu', 'Converti', 'Écarté', DONE];
     let suggestions = [];
+    let support = [];
+    async function loadSupport() {
+      const { data, error } = await sb.from('amb_support').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      support = data;
+      renderSupport();
+    }
+    function renderSupport() {
+      document.getElementById('done-count-support').textContent = support.filter((r) => r.status === 'Traité').length;
+      const showDone = document.getElementById('show-done-support').checked;
+      const rows = support.filter((r) => showDone || r.status !== 'Traité');
+      document.getElementById('support-rows').innerHTML = rows.length ? rows.map((r) => `
+        <tr>
+          <td>${esc(r.created_at.slice(0, 10))}</td>
+          <td>${esc(r.kind)}</td>
+          <td>${esc(r.author_name)}</td>
+          <td>${esc(r.page)}</td>
+          <td style="white-space:pre-wrap;min-width:280px">${esc(r.message)}</td>
+          <td><select data-support="${esc(r.id)}">${['Nouveau', 'En cours', 'Traité'].map((o) => `<option${o === r.status ? ' selected' : ''}>${o}</option>`).join('')}</select></td>
+        </tr>`).join('') : '<tr><td colspan="6" class="muted">Aucune demande en cours.</td></tr>';
+      document.querySelectorAll('[data-support]').forEach((el) => el.addEventListener('change', async () => {
+        const { error } = await sb.from('amb_support').update({ status: el.value }).eq('id', el.dataset.support);
+        if (error) { console.error(error); alert('Le suivi n’a pas pu être enregistré.'); }
+        await loadSupport();
+      }));
+    }
+    document.getElementById('show-done-support').addEventListener('change', renderSupport);
+
     async function loadMapFiches() {
       const { data, error } = await sb.rpc('amb_map_fiches');
       if (error) throw error;
@@ -494,7 +532,7 @@
       myEmail = (who.user.email || '').toLowerCase();
       document.getElementById('login').hidden = true;
       document.getElementById('content').hidden = false;
-      await Promise.all([loadContributions(), loadMembers(), loadRequests(), loadSuggestions(), loadTarget(), loadMapFiches()]);
+      await Promise.all([loadContributions(), loadMembers(), loadRequests(), loadSuggestions(), loadTarget(), loadMapFiches(), loadSupport()]);
     }
 
     wireLoginForm(start);

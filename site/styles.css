@@ -237,3 +237,16 @@ dl { margin: 12px 0; }
 .cand-contact form { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .cand-contact .btn { grid-column: 1 / -1; justify-self: start; font-size: 13px; }
 @media (max-width: 600px) { .search-fields, .cand-contact form { grid-template-columns: 1fr; } }
+
+/* Bouton et fenêtre « Support » */
+#support-dialog { border: 1px solid var(--border); border-radius: 20px; padding: 20px; width: min(480px, calc(100vw - 32px)); background: var(--surface); color: var(--text); }
+#support-dialog::backdrop { background: rgba(20,20,20,.45); }
+#support-dialog h2 { margin: 0 0 4px; font-size: 20px; }
+#support-dialog textarea { width: 100%; margin-top: 10px; }
+.support-kind { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 14px; }
+.support-kind label { display: flex; gap: 6px; align-items: center; }
+.support-kind input { width: auto; }
+.support-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.support-actions .btn { width: auto; }
+.map-notice { margin: 8px 0 0; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 10px; font-size: 12.5px; color: var(--muted); }
+#support-open { color: var(--link, #9A5415); text-decoration: underline; }

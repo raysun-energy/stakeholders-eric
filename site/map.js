@@ -25,6 +25,13 @@ function loadGoogleScript(key) {
   return new Promise((resolve, reject) => {
     window.__cwGoogleReady = resolve;
     // Clé refusée par Google (mauvaise clé, domaine non autorisé…) : on repasse sur OpenStreetMap.
+    // Google écrit la raison du refus dans la console (« ...MapError ») : on la garde pour l'afficher à l'équipe.
+    const consoleError = console.error;
+    console.error = (...a) => {
+      const m = String(a[0] ?? '').match(/Google Maps JavaScript API error: (\w+)/);
+      if (m) { try { sessionStorage.setItem('cw-map-reason', m[1]); } catch {} }
+      consoleError.apply(console, a);
+    };
     window.gm_authFailure = () => {
       try { sessionStorage.setItem('cw-map-fallback', String(Date.now())); } catch {}
       location.reload();
