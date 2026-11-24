@@ -1,0 +1,44 @@
+# Site de test gratuit (GitHub Pages) : chaque push sur la branche de travail publie la carte sur
+#   https://raysun-energy.github.io/stakeholders-eric/
+# sans passer par Netlify, donc sans consommer de crédits. La production (Netlify) ne change que lorsque la branche
+# de travail est fusionnée dans la branche de production.
+# Le site de test utilise la même base de données que la production : on y teste l'affichage et les fonctions,
+# avec les vraies données. Un bandeau « Site de test » est ajouté en haut de chaque page.
+# Réglage à faire une fois : Settings › Pages › Source « Deploy from a branch », branche gh-pages, dossier / (root).
+name: Site de test
+
+on:
+  push:
+    branches: [claude/apporteurs-dossiers]
+  workflow_dispatch:
+
+concurrency:
+  group: site-de-test
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Écrire la configuration (valeurs par défaut du dépôt)
+        run: node scripts/write-config.js
+      - name: Ajouter le bandeau « Site de test »
+        run: |
+          BANDEAU='<div style="background:#141414;color:#FFE20C;font:600 13px Inter,system-ui,sans-serif;text-align:center;padding:6px 12px">Site de test · données réelles · version '"${GITHUB_SHA::7}"'</div>'
+          for f in site/*.html; do sed -i "0,/<body>/s||<body>${BANDEAU}|" "$f"; done
+          touch site/.nojekyll
+      - name: Publier sur la branche gh-pages
+        run: |
+          cd site
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Site de test : ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

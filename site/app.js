@@ -1040,6 +1040,13 @@ async function start() {
   map.onMove(() => { refreshCandidates().catch(console.error); refreshZonings().catch(console.error); });
   $('#show-zonings').addEventListener('change', () => refreshZonings().catch(console.error));
   $('#zoning-import').hidden = state.user.role !== 'admin';
+  // Équipe : un clic sur un lieu de la carte Google (commerce, entreprise…) ouvre la recherche autour de ce lieu.
+  if (state.user.role === 'admin') {
+    map.onPoiClick(async (poi) => {
+      const adresse = await map.placeAddress(poi.placeId).catch(() => null);
+      selectMember({ kind: 'adresse', name: (adresse || 'Lieu choisi sur la carte').replace(/, Belgi(que|ë|um)$/i, ''), operation: 'Point de recherche', lat: poi.lat, lng: poi.lng, id: null });
+    });
+  }
   // Équipe : recherche autour d'une adresse (localisée par Google, ou OpenStreetMap en secours).
   $('#around-form').hidden = state.user.role !== 'admin';
   $('#around-form').addEventListener('submit', async (e) => {

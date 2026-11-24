@@ -25,6 +25,17 @@ Un apporteur d'affaires est une **société** (un installateur, par exemple) à 
 - Tables `amb_orgs`, `amb_dossiers`, `amb_org_invoices` (script `supabase/010_apporteurs_dossiers_facturation.sql`), e-mails par la fonction `amb-dossier-notify` (envoi par Odoo, mêmes secrets que `amb-notify`).
 - La plateforme couvre les trois Régions : Bruxelles, Wallonie et Flandre.
 
+## Site de test (gratuit)
+
+Chaque push sur la branche de travail `claude/apporteurs-dossiers` publie la carte sur GitHub Pages
+(https://raysun-energy.github.io/stakeholders-eric/), sans passer par Netlify et donc sans consommer de crédits
+(`.github/workflows/site-de-test.yml`). La production ne change que lorsque la branche de travail est fusionnée dans
+`claude/leads-map-platform-rzhme7`. Le site de test lit la même base que la production et affiche un bandeau « Site de test ».
+
+Réglages faits une fois : GitHub › Settings › Pages (branche `gh-pages`) ; Supabase › Authentication › URL Configuration
+(ajouter l'adresse de test aux Redirect URLs, pour les liens de connexion) ; clé Google Maps (ajouter l'adresse de test aux
+référents HTTP, sinon la carte de test passe sur OpenStreetMap).
+
 ## Mise en place
 
 Déjà fait dans le projet Supabase **Suivi-vendeurs** : tables `amb_*`, règles d'accès, 16 immeubles, invitation de eric.rw@raysun.solar en rôle équipe. `site/config.js` est rempli. Le projet Netlify **citywatt-ambassadeurs** existe (https://citywatt-ambassadeurs.netlify.app).

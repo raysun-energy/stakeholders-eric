@@ -5,7 +5,9 @@
 //   onMapClick(cb | null), geocode(adresse) -> { lat, lng, address } | null,
 //   getBounds() -> { minLat, maxLat, minLng, maxLng } | null, onMove(cb) (après un déplacement ou un zoom),
 //   setShapes([{ id, name, geometry (GeoJSON) }]) : remplace les contours dessinés (zonings),
-//   setCircle({ lat, lng, radius (m) } | null) : cercle de recherche autour d'un point, cadré à l'écran
+//   setCircle({ lat, lng, radius (m) } | null) : cercle de recherche autour d'un point, cadré à l'écran,
+//   onPoiClick(cb | null) : clic sur un lieu de la carte Google (commerce, entreprise…) -> { lat, lng, placeId } ;
+//                           sans effet sur OpenStreetMap, qui n'a pas de lieux cliquables
 
 const BRUSSELS = { lat: 50.85, lng: 4.36 };
 
@@ -51,8 +53,12 @@ async function createGoogleMap(el, { key, mapId }) {
     },
     streetViewControl: false, fullscreenControl: false, clickableIcons: false,
   });
-  let clickHandler = null;
-  map.addListener('click', (e) => clickHandler && clickHandler(e.latLng.lat(), e.latLng.lng()));
+  let clickHandler = null, poiHandler = null;
+  map.addListener('click', (e) => {
+    // Clic sur un lieu Google : pas de bulle d'information standard, c'est la page qui décide quoi afficher.
+    if (e.placeId && poiHandler && !clickHandler) { e.stop(); poiHandler({ lat: e.latLng.lat(), lng: e.latLng.lng(), placeId: e.placeId }); return; }
+    if (clickHandler) clickHandler(e.latLng.lat(), e.latLng.lng());
+  });
 
   return {
     kind: 'google',
@@ -81,6 +87,12 @@ async function createGoogleMap(el, { key, mapId }) {
       return { minLat: sw.lat(), maxLat: ne.lat(), minLng: sw.lng(), maxLng: ne.lng() };
     },
     onMove(cb) { map.addListener('idle', cb); },
+    onPoiClick(cb) { poiHandler = cb; map.setOptions({ clickableIcons: !!cb }); },
+    async placeAddress(placeId) {
+      const { Geocoder } = await google.maps.importLibrary('geocoding');
+      const { results } = await new Geocoder().geocode({ placeId }).catch(() => ({ results: [] }));
+      return results[0]?.formatted_address ?? null;
+    },
     setCircle(c) {
       if (this._circle) { this._circle.setMap(null); this._circle = null; }
       if (!c) return;
@@ -145,6 +157,8 @@ function createLeafletMap(el) {
       return { minLat: b.getSouth(), maxLat: b.getNorth(), minLng: b.getWest(), maxLng: b.getEast() };
     },
     onMove(cb) { map.on('moveend', cb); },
+    onPoiClick() {},
+    async placeAddress() { return null; },
     setCircle(c) {
       if (this._circle) { this._circle.remove(); this._circle = null; }
       if (!c) return;
