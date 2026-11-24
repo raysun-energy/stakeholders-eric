@@ -177,6 +177,48 @@ async function refreshZonings() {
   state.map.setShapes(data.map((z) => ({ id: z.id, name: z.nom, geometry: z.geometry })));
 }
 
+// --- Équipe : mise à jour des zonings depuis les géoportails régionaux ---
+// Même import que l'ancien outil Zoning as Community (fonction zc-import-zonings, côté serveur) : pour chaque Région,
+// les zonings existants sont remplacés par la version actuelle du géoportail, page par page.
+const ZC_IMPORT_URL = 'https://meek-florentine-28add5.netlify.app/.netlify/functions/zc-import-zonings';
+const ZONING_SOURCES = [
+  { region: 'Wallonie', type: 'arcgis', url: 'https://geoservices.wallonie.be/arcgis/rest/services/AMENAGEMENT_TERRITOIRE/PRE/MapServer/0', where: "NATURE='PRE'", champ_nom: 'LIBELLE', champ_gestionnaire: 'CODESERVICE', nom_defaut: 'Périmètre de reconnaissance économique' },
+  { region: 'Flandre', type: 'wfs', url: 'https://geo.api.vlaanderen.be/Bedrijventerreinen/wfs?typeNames=Bedrijventerreinen:Bedrter', champ_nom: '', champ_gestionnaire: '', nom_defaut: 'Bedrijventerrein' },
+  { region: 'Bruxelles', type: 'wfs', url: 'https://gis.urban.brussels/geoserver/ows?typeNames=PERSPECTIVE_FR:PRDD_A10_C5_PRAS_ZIU',
+    cql: "NAME_FR ILIKE '%industri%' OR NAME_FR ILIKE '%entreprise%' OR NAME_FR ILIKE '%portuaire%' OR NAME_FR ILIKE '%transport%'",
+    champ_nom: 'NAME_FR', champ_gestionnaire: '', nom_defaut: 'Zone économique (PRAS)' },
+];
+async function importZonings(btn) {
+  const msg = $('#zoning-import-msg');
+  if (!confirm('Mettre à jour les zonings depuis les géoportails ?\n\nPour chaque Région, les zonings actuels sont remplacés par la version en ligne du géoportail. Compter une à deux minutes.')) return;
+  btn.disabled = true;
+  const bilan = [];
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    for (const src of ZONING_SOURCES) {
+      let offset = 0, total = 0, reset = true, erreur = null;
+      for (let page = 0; page < 200; page++) {
+        msg.textContent = `${src.region} : ${total} zonings…`;
+        try {
+          const res = await fetch(ZC_IMPORT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ ...src, offset, taille: 300, reset }),
+          });
+          const r = await res.json().catch(() => ({}));
+          if (!res.ok || !r.ok) throw new Error(r.error || `Erreur ${res.status}`);
+          total += r.importes; offset = r.offset; reset = false;
+          if (!r.suite || !r.importes) break;
+        } catch (e) { erreur = e.message; break; }
+      }
+      bilan.push(`${src.region} : ${erreur ? `erreur (${erreur})${total ? `, ${total} zonings importés avant` : ''}` : `${total} zonings`}`);
+    }
+  } catch (e) { console.error(e); bilan.push(`Import interrompu : ${e.message}`); }
+  msg.textContent = `Mise à jour terminée.\n${bilan.join('\n')}`;
+  btn.disabled = false;
+  refreshZonings().catch(console.error);
+}
+
 // --- Équipe : recherche d'entreprises candidates autour d'un membre ---
 // Appelle la fonction zc-voisins de l'outil Zoning as Community (côté serveur) : entreprises de la BCE dans le rayon,
 // estimation de la consommation, analyse des toitures (Google Solar) pour les plus prometteuses. Résultats gardés en base.
@@ -978,6 +1020,8 @@ async function start() {
   map.onZoom(updateLabels);
   map.onMove(() => { refreshCandidates().catch(console.error); refreshZonings().catch(console.error); });
   $('#show-zonings').addEventListener('change', () => refreshZonings().catch(console.error));
+  $('#zoning-import').hidden = state.user.role !== 'admin';
+  $('#zoning-import-btn').addEventListener('click', (e) => importZonings(e.currentTarget));
   $('#show-candidates').addEventListener('change', () => refreshCandidates().catch(console.error));
   $('#cand-export').addEventListener('click', (e) => exportCandidates(e.currentTarget));
   renderMarkers();
