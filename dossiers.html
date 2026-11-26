@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RaYSun · Espace apporteurs d'affaires</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { display: block; }
+    .wrap { padding: 20px 16px 80px; max-width: 1180px; margin: 0 auto; }
+    h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; margin: 34px 0 12px; }
+    .lead-in { color: var(--muted); margin: 0 0 14px; max-width: 70ch; }
+    .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 16px 0; }
+    .bar select { width: auto; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--surface); }
+    .seg button { border: 0; background: none; font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--text); }
+    .seg button[aria-pressed="true"] { background: var(--pill); color: #fff; font-weight: 600; }
+
+    /* Bandeau : part de la société parmi tous les apporteurs */
+    .hero { background: #141414; color: #F5F1EA; border-radius: 26px; padding: 28px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: end; }
+    .hero .eyebrow { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; border: 1px solid #4a4a46; border-radius: 999px; padding: 3px 10px; }
+    .hero .big { font-size: clamp(44px, 8vw, 72px); font-weight: 800; letter-spacing: -.03em; line-height: 1; margin: 14px 0 6px;
+      background: linear-gradient(135deg, var(--sun1), var(--sun2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p { margin: 0; color: #BDB8AE; }
+    .hero .facts { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 16px; }
+    .hero .facts b { display: block; font-size: 22px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+    .hero .facts span { font-size: 12px; color: #BDB8AE; }
+    .meter { height: 10px; border-radius: 999px; background: #33322e; overflow: hidden; margin-top: 14px; }
+    .meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--sun1), var(--sun2)); }
+
+    /* Podium */
+    .podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end; min-height: 190px; }
+    .podium .step { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; min-width: 0; }
+    .podium .who { font-weight: 700; font-size: 14px; color: #fff; overflow-wrap: anywhere; }
+    .podium .share { font-size: 13px; color: #BDB8AE; font-variant-numeric: tabular-nums; }
+    .podium .block { width: 100%; border-radius: 14px 14px 6px 6px; background: #2b2a26; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: #F5F1EA; }
+    .podium .p1 .block { height: 110px; background: linear-gradient(135deg, var(--sun1), var(--sun2)); color: #141414; }
+    .podium .p2 .block { height: 78px; }
+    .podium .p3 .block { height: 54px; }
+    .podium .me .who::after { content: " (vous)"; font-weight: 500; color: var(--sun1); }
+    .podium .empty .block { opacity: .35; }
+
+    /* Dossiers */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+    .dossier { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+    .dossier h3 { margin: 0; font-size: 17px; font-weight: 800; }
+    .dossier .meta { color: var(--muted); font-size: 13px; }
+    .dossier dl { margin: 0; }
+    .dossier .kv { grid-template-columns: 110px 1fr; font-size: 14px; }
+    .dossier .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; }
+    .dossier .btn.primary { width: auto; }
+    .dossier textarea { font-size: 14px; }
+    .dossier .msg { background: var(--accent-soft); border-radius: 14px; padding: 10px 12px; font-size: 14px; white-space: pre-line; margin: 0; }
+    .dossier .msg b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
+    .dossier a, td a { color: var(--accent); }
+    /* Fil de discussion du dossier */
+    .fil { border-top: 1px solid var(--border); padding-top: 10px; }
+    .fil summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+    .fil ol { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .fil li { max-width: 92%; padding: 8px 12px; border-radius: 14px; font-size: 14px; white-space: pre-line; background: var(--bg); border: 1px solid var(--border); align-self: flex-start; }
+    .fil li.moi { align-self: flex-end; background: var(--pill); color: #fff; border-color: var(--pill); }
+    .fil li small { display: block; font-size: 11.5px; opacity: .75; margin-bottom: 2px; white-space: normal; }
+    .fil form { display: flex; gap: 8px; align-items: flex-end; }
+    .fil form textarea { flex: 1; }
+    .fil form .btn { width: auto; padding: 9px 14px; }
+    .st { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 3px 10px; }
+    .st-Proposé { background: #FCF0D9; color: #8A5206; }
+    .st-Confirmé { background: #E3F2E9; color: #1E7F4E; }
+    .st-Refusé { background: #FBE4E0; color: #B83A2C; }
+    .st-Visite, .st-Fiche { background: #E3EDF7; color: #2E5E8C; }
+    .st-Perdu { background: #FBE4E0; color: #B83A2C; }
+    .dossier .msg.warn { background: #FBE4E0; } .dossier .msg.warn b { color: #B83A2C; }
+    .dossier .facture { font-size: 13px; color: var(--muted); display: block; } .dossier .facture input { display: block; margin-top: 4px; font-size: 13px; }
+    .st-Clôturé { background: var(--border); color: var(--muted); }
+
+    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    th { background: var(--bg); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tr.total td { font-weight: 700; background: var(--bg); }
+    .dossier-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .dossier.folded { cursor: pointer; gap: 6px; } .dossier.folded:hover { border-color: var(--accent); }
+    .cards.foldable { align-items: start; }
+    #fold-all, .dossier .fold { color: var(--accent); text-decoration: underline; font-size: 13px; }
+    tr.grp { cursor: pointer; } tr.grp td { font-weight: 700; background: var(--bg); }
+    tr.grp-q td:first-child { padding-left: 26px; } tr.grp-q td { font-weight: 600; background: transparent; }
+    tr.grp small { display: inline; font-weight: 400; color: var(--muted); margin-left: 6px; } tr.grp .chev { display: inline-block; width: 14px; color: var(--accent); }
+    tr.grp:hover td, tr.grp:focus-visible td { background: var(--accent-soft); } td.mois { padding-left: 46px; }
+    .dossier, .dossier h3, .dossier .msg, .dossier dd, .dossier .meta { overflow-wrap: anywhere; min-width: 0; }
+    td small { color: var(--muted); display: block; }
+    .link.calc { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+    tr.detail > td { background: var(--bg); padding: 14px; }
+    .calc-table { font-size: 13px; }
+    .calc-table tr.op td { font-weight: 700; background: var(--surface); padding-top: 12px; }
+    .calc-table th, .calc-table td { padding: 7px 10px; }
+
+    /* Outils de l'équipe */
+    .admin { border: 1px dashed var(--border); border-radius: 22px; padding: 4px 18px 18px; margin-top: 40px; background: var(--surface); }
+    .admin > h2 { margin-top: 18px; }
+    .admin h3 { font-size: 16px; margin: 26px 0 10px; }
+    .form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
+    .form label { font-size: 13px; display: block; }
+    .form label > input, .form label > select, .form label > textarea { margin-top: 4px; }
+    .form .wide { grid-column: span 2; }
+    .form .full { grid-column: 1 / -1; }
+    .form .btn { width: auto; justify-self: start; }
+    .people { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+    .people li.pending { color: var(--muted); }
+    /* Listes de propositions (Odoo, adresses Google) */
+    .form label { position: relative; }
+    .sugg { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin: 4px 0 0; padding: 4px; list-style: none; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.12); max-height: 280px; overflow-y: auto; }
+    .sugg li { padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    .sugg li:hover, .sugg li[aria-selected="true"] { background: var(--accent-soft); }
+    .sugg li small { display: block; color: var(--muted); }
+    .sugg li.info { cursor: default; color: var(--muted); }
+    .sugg li.info:hover { background: none; }
+    .odoo-people { margin: 10px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--accent-soft); font-size: 14px; }
+    .odoo-people ul { margin: 6px 0 0; padding: 0; list-style: none; }
+    .odoo-people li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 4px 0; flex-wrap: wrap; }
+    .odoo-people .btn { padding: 5px 12px; font-size: 13px; }
+    .ok-msg { color: #1E7F4E; font-size: 14px; min-height: 1.2em; }
+    @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .form { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .form { grid-template-columns: 1fr; } .form .wide { grid-column: auto; } .dossier .kv { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body><div style="background:#141414;color:#FFE20C;font:600 13px Inter,system-ui,sans-serif;text-align:center;padding:6px 12px">Site de test · données réelles · version e8effb2</div>
+  <div id="login" class="overlay" hidden>
+    <form id="login-form" class="card">
+      <h1>RaYSun <span>Apporteurs d'affaires</span></h1>
+      <p class="muted">Vos dossiers, votre facturation et votre classement.</p>
+      <label>Votre email <input name="email" type="email" required autocomplete="email"></label>
+      <label>Mot de passe <input name="password" type="password" autocomplete="current-password"></label>
+      <p class="error" id="login-error"></p>
+      <p class="success" id="login-info" hidden></p>
+      <button type="submit" class="btn primary">Se connecter</button>
+      <button type="button" id="magic-link" class="link" style="margin-top:12px">Première visite ou pas de mot de passe ? Recevoir un lien de connexion par email</button>
+    </form>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">RaYSun <span>Apporteurs d'affaires</span></div>
+    <div class="user">
+      <span id="user-name"></span>
+      <a id="tools-link" href="https://meek-florentine-28add5.netlify.app/" hidden>Tous les outils</a>
+      <a id="admin-link" href="admin.html" hidden>Suivi équipe</a>
+      <a href="salesbook.html" target="_blank" rel="noopener">Sales book</a>
+      <a href="./">Carte</a>
+      <button class="link" onclick="signOut()">Se déconnecter</button>
+    </div>
+  </header>
+
+  <div class="wrap" id="content" hidden>
+    <p class="error" id="error"></p>
+
+    <div class="bar" id="org-bar" hidden>
+      <label for="org-view" class="muted">Société affichée</label>
+      <select id="org-view"></select>
+    </div>
+
+    <div id="no-org" class="notice" hidden>Votre compte n'est rattaché à aucune société d'apporteurs d'affaires. Écrivez à eric.rw@raysun.solar pour être rattaché.</div>
+
+    <div id="space" hidden>
+      <div class="bar">
+        <div class="seg" role="group" aria-label="Période">
+          <button type="button" data-kind="trimestre" aria-pressed="true">Par trimestre</button>
+          <button type="button" data-kind="année" aria-pressed="false">Par année</button>
+        </div>
+        <select id="period" aria-label="Période affichée"></select>
+      </div>
+
+      <section class="hero" aria-live="polite">
+        <div id="hero-main"></div>
+        <div>
+          <div class="podium" id="podium"></div>
+        </div>
+      </section>
+
+      <div id="ranking-block" hidden>
+        <h2>Classement complet de la période</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Rang</th><th>Société</th><th class="num">Facturé (HTVA)</th><th class="num">Part</th></tr></thead>
+          <tbody id="ranking"></tbody>
+        </table></div>
+      </div>
+
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><h2 id="dossiers-title">Vos dossiers</h2><button type="button" class="link" id="fold-all" hidden>Tout déplier</button><label id="lost-box" hidden style="font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center"><input type="checkbox" id="show-lost" style="width:auto"> Afficher les dossiers perdus (<span id="lost-count">0</span>)</label></div>
+      <p class="lead-in" id="dossiers-intro">Vos prospects et les dossiers que RaYSun vous confie. Confirmez un dossier pour le prendre en charge, puis cliquez « Fiche traitée » quand vous avez la facture du prospect.</p>
+      <div class="cards" id="dossiers"></div>
+
+      <h2>Facturation</h2>
+      <p class="lead-in">Commissions hors TVA par mois, calculées par RaYSun à partir des volumes d'énergie partagés. Pour chaque mois, le détail du calcul est disponible client par client.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Mois</th><th>Source</th><th>Détail</th><th class="num">Montant HTVA</th><th id="inv-actions"></th></tr></thead>
+        <tbody id="invoices"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Outils de l'équipe -->
+    <section class="admin" id="admin" hidden>
+      <h2>Gestion par l'équipe</h2>
+      <p class="lead-in">Visible uniquement par l'équipe RaYSun.</p>
+
+      <h3 id="dossier-form-title">Affecter un dossier à une société</h3>
+      <form class="form" id="dossier-form">
+        <label>Société <select name="org_id" required></select></label>
+        <label class="wide">Prospect <input name="prospect" required autocomplete="off" placeholder="Tapez un nom, ou collez le lien de la fiche Odoo"></label>
+        <input type="hidden" name="odoo_lead_id">
+        <label>Région <select name="region"><option>Bruxelles</option><option>Wallonie</option><option>Flandre</option></select></label>
+        <label class="wide">Adresse <input name="address" autocomplete="off" placeholder="Commencez à taper : Google propose les adresses"></label>
+        <label class="wide">Projet <input name="project" placeholder="Ex. toiture de 800 m², visite pour une installation PV"></label>
+        <label>Contact <input name="contact_name" placeholder="Prénom Nom"></label>
+        <label>Fonction <input name="contact_function"></label>
+        <label>Téléphone <input name="contact_phone" type="tel"></label>
+        <label>E-mail <input name="contact_email" type="email"></label>
+        <label>Disponible le <input name="available_on" type="date"></label>
+        <label class="wide">Précision sur la disponibilité <input name="available_note" placeholder="Ex. le matin, prévenir la veille"></label>
+        <label class="full">Message pour l'apporteur <textarea name="message" rows="3" placeholder="Ce que vous voulez lui dire : contexte, points d'attention, ce que vous attendez de la visite"></textarea></label>
+        <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit" style="width:auto">Affecter et envoyer l'e-mail</button>
+          <button class="btn secondary" type="button" id="dossier-cancel" hidden>Annuler la modification</button></div>
+        <p class="ok-msg full" id="dossier-msg"></p>
+      </form>
+
+      <h3>Montants facturés : reprise de l'outil Fees</h3>
+      <p class="muted small">Les commissions de chaque apporteur sont relues chaque nuit dans l'outil Fees et recalculées par mois. Rien n'est à saisir ici.</p>
+      <div class="bar"><button class="btn secondary" type="button" id="fees-now">Relire l'outil Fees maintenant</button><span class="muted small" id="fees-state"></span></div>
+
+      <h3>Sociétés et personnes</h3>
+      <form class="form" id="org-form">
+        <label class="wide">Société <input name="name" required autocomplete="off" placeholder="Tapez un nom : les fiches contact Odoo sont proposées"></label>
+        <button class="btn secondary" type="submit">Créer sans fiche Odoo</button>
+      </form>
+      <div class="odoo-people" id="odoo-people" hidden></div>
+      <form class="form" id="person-form" style="margin-top:10px">
+        <label>Société <select name="org_id" required></select></label>
+        <label>Nom de la personne <input name="name" required></label>
+        <label>E-mail <input name="email" type="email" required></label>
+        <button class="btn secondary" type="submit">Rattacher la personne</button>
+        <p class="ok-msg full" id="org-msg"></p>
+      </form>
+      <p class="muted small">Une personne rattachée reçoit les e-mails des dossiers de sa société et se connecte avec le lien envoyé par e-mail à sa première visite. Pour lui donner un mot de passe, utilisez « Qui a accès » dans le suivi équipe.</p>
+      <div class="table-wrap" style="margin-top:10px"><table>
+        <thead><tr><th>Société</th><th>Personnes</th></tr></thead>
+        <tbody id="orgs"></tbody>
+      </table></div>
+    </section>
+  </div>
+
+  <script src="vendor/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="dossiers.js"></script>
+  <script src="support.js"></script>
+</body>
+</html>

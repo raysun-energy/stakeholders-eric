@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CityWatt — Ambassadeurs</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body><div style="background:#141414;color:#FFE20C;font:600 13px Inter,system-ui,sans-serif;text-align:center;padding:6px 12px">Site de test · données réelles · version e8effb2</div>
+  <!-- Connexion -->
+  <div id="login" class="overlay" hidden>
+    <form id="login-form" class="card">
+      <h1>CityWatt <span>Ambassadeurs</span></h1>
+      <p class="muted">Aidez-nous à ouvrir les portes des grands bâtiments à Bruxelles, en Wallonie et en Flandre. Une introduction suffit : nous prenons le relais.</p>
+      <label>Votre email <input name="email" type="email" required autocomplete="email"></label>
+      <label>Mot de passe <input name="password" type="password" autocomplete="current-password"></label>
+      <p class="error" id="login-error"></p>
+      <p class="success" id="login-info" hidden></p>
+      <button type="submit" class="btn primary">Se connecter</button>
+      <button type="button" id="magic-link" class="link" style="margin-top:12px">Première visite ou pas de mot de passe ? Recevoir un lien de connexion par email</button>
+    </form>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">CityWatt <span>Ambassadeurs</span></div>
+    <div class="user">
+      <span id="user-name"></span>
+      <a id="tracker-link" href="https://meek-florentine-28add5.netlify.app/" hidden>Tous les outils</a>
+      <a id="dossiers-link" href="dossiers.html" hidden>Dossiers apporteurs</a>
+      <a id="book-link" href="salesbook.html" target="_blank" rel="noopener" hidden>Sales book</a>
+      <a id="admin-link" href="admin.html" hidden>Suivi équipe</a>
+      <button id="logout" class="link">Se déconnecter</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="intro">
+        <p>Cliquez sur un membre (point vert) ou n’importe où sur la carte, ou entrez une adresse : vous obtenez la liste des entreprises à démarcher dans le rayon choisi, avec leurs coordonnées. Vous connaissez un autre lieu ? Utilisez le bouton « + ».</p>
+        <input id="search" type="search" placeholder="Rechercher un immeuble, une société, une commune…">
+        <div class="filters">
+          <label><input type="checkbox" id="show-members" autocomplete="off"> <i class="dot member"></i><span>Membres des communautés (<span id="members-count">0</span>)</span></label>
+          <label><input type="checkbox" id="show-suggestions" autocomplete="off"> <i class="dot sugg"></i><span>Lieux proposés</span></label>
+          <label title="Contours des zonings d’activité (géoportails régionaux). Visibles en zoomant sur une commune."><input type="checkbox" id="show-zonings" autocomplete="off" checked> <i class="dot zoning"></i><span>Zonings</span></label>
+          <label id="dossiers-filter" hidden><input type="checkbox" id="show-dossiers" autocomplete="off" checked> <i class="dot dossier"></i><span>Dossiers apporteurs (<span id="dossiers-count">0</span>)</span></label>
+          <label id="converted-filter" hidden><input type="checkbox" id="show-converted" autocomplete="off"> <span>Afficher les points convertis / traités</span></label>
+        </div>
+        <form id="around-form" style="margin-top:10px">
+          <label class="small" for="around-address">Chercher des entreprises autour d’une adresse</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <input id="around-address" type="search" autocomplete="off" placeholder="Rue, numéro, commune">
+            <button type="submit" class="btn secondary" style="padding:8px 12px;font-size:13px">Localiser</button>
+          </div>
+          <p class="error small" id="around-msg" style="margin:4px 0 0"></p>
+        </form>
+        <div id="zoning-import" hidden style="margin-top:8px">
+          <button type="button" class="btn secondary" id="zoning-import-btn" style="font-size:13px">Mettre à jour les zonings</button>
+          <p class="muted small" id="zoning-import-msg" style="margin:6px 0 0;white-space:pre-line"></p>
+        </div>
+        <button type="button" class="btn secondary" id="cand-export" style="margin-top:8px;font-size:13px">Exporter toutes les entreprises (Excel)</button>
+        <p class="error small" id="cand-export-msg" style="margin:4px 0 0"></p>
+        <!-- Critères de ciblage : texte modifiable par l'équipe dans le suivi équipe (table amb_settings). -->
+        <details class="target" id="target-box" hidden>
+          <summary>Qui cibler en ce moment ?</summary>
+          <div id="target-text"></div>
+        </details>
+      </div>
+      <ul id="lead-list" class="lead-list"></ul>
+    </aside>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="fabs">
+        <button id="add-lead" class="fab fab-team" hidden title="Ajouter un immeuble à la liste (équipe)">+ Immeuble</button>
+        <button id="add-place" class="fab" title="Proposer un lieu à prospecter">+ Proposer un lieu</button>
+      </div>
+      <div class="placing-hint">Cliquez sur la carte à l’endroit du lieu, ou tapez son adresse dans le formulaire.</div>
+    </div>
+
+    <section id="panel" class="panel" hidden>
+      <button class="close" id="panel-close" aria-label="Fermer">×</button>
+      <div id="panel-body"></div>
+    </section>
+  </main>
+
+  <template id="form-template">
+    <form class="contrib-form">
+      <h3>Comment pouvez-vous nous aider ?</h3>
+      <div class="paths">
+        <label class="path">
+          <input type="radio" name="mode" value="intro" required>
+          <strong>Je fais l’introduction</strong>
+          <span>Vous nous mettez en relation (email, message, café). Nous préparons un petit texte si besoin.</span>
+        </label>
+        <label class="path">
+          <input type="radio" name="mode" value="contact">
+          <strong>Je vous donne le contact</strong>
+          <span>Vous nous transmettez ses coordonnées et nous l’approchons nous-mêmes.</span>
+        </label>
+        <label class="path">
+          <input type="radio" name="mode" value="data">
+          <strong>J’ai des données sur ce bâtiment</strong>
+          <span>Consommation, injection, prix, dernière facture : sans forcément donner de contact.</span>
+        </label>
+      </div>
+      <div class="fields" hidden>
+        <div class="contact-block">
+        <label>Nom de votre contact * <input name="contactName"></label>
+        <div class="row">
+          <label>Sa fonction <input name="contactFunction"></label>
+          <label>Sa société <input name="contactCompany"></label>
+        </div>
+        <div class="row contact-only">
+          <label>Email <input name="contactEmail" type="email"></label>
+          <label>Téléphone <input name="contactPhone" type="tel"></label>
+        </div>
+        <label>Comment le connaissez-vous ? <input name="relation" placeholder="Ancien collègue, ami, client, conseil d’administration…"></label>
+        <div class="row">
+          <label>Qualité du lien
+            <select name="strength">
+              <option value="">—</option><option>Fort</option><option>Moyen</option><option>Faible</option>
+            </select>
+          </label>
+          <label class="intro-only">Quand ?
+            <select name="when">
+              <option value="">—</option>
+              <option>Tout de suite</option>
+              <option>Demain</option>
+              <option>Dans une semaine</option>
+              <option>Indéterminé</option>
+            </select>
+          </label>
+        </div>
+        <label class="checkbox contact-only"><input type="checkbox" name="mentionName" checked> Vous pouvez dire que vous venez de ma part</label>
+        </div>
+        <div class="energy-slot"></div>
+        <label>Remarques <textarea name="remarks" rows="3"></textarea></label>
+        <p class="error"></p>
+        <button type="submit" class="btn primary">Envoyer</button>
+      </div>
+    </form>
+  </template>
+
+  <!-- Données énergie : insérées dans le formulaire d'un immeuble et dans « Proposer un lieu ». -->
+  <template id="energy-template">
+    <fieldset class="energy">
+      <legend>Données énergie <span class="muted optional">(facultatif)</span></legend>
+      <div class="row">
+        <label>Consommation annuelle (MWh/an) <input name="consumptionMwh" type="number" min="0" step="any"></label>
+        <label>Injection annuelle (MWh/an) <input name="injectionMwh" type="number" min="0" step="any"></label>
+      </div>
+      <label>Fournisseur actuel <input name="supplier" placeholder="Engie, Luminus, TotalEnergies…"></label>
+      <div class="row">
+        <label>Formule de prélèvement
+          <select name="offtakeFormula"><option value="">—</option><option>Fixe</option><option>Variable</option><option>Indexé</option></select>
+        </label>
+        <label class="checkbox bihoraire"><input type="checkbox" name="offtakeBihoraire"> Bi-horaire (jour / nuit)</label>
+      </div>
+      <label>Détail du prix de prélèvement <input name="offtakeDetail" placeholder="Ex. 0,21 €/kWh · Belpex + 12 €/MWh · jour 0,24 / nuit 0,18"></label>
+      <div class="row">
+        <label>Formule d’injection
+          <select name="injectionFormula"><option value="">—</option><option>Fixe</option><option>Variable</option><option>Indexé</option></select>
+        </label>
+        <label>Détail du prix d’injection <input name="injectionDetail" placeholder="Ex. 0,04 €/kWh"></label>
+      </div>
+      <p class="notice">📄 <strong>Dernière facture d’électricité :</strong> elle ne peut pas dater de plus de 3 mois.
+        Si vous ne remplissez pas les champs ci-dessus (consommation, injection, formules de prix…), ces informations doivent figurer sur la facture.</p>
+      <label>Dernière facture <span class="muted">(PDF ou photo, 10 Mo max.)</span>
+        <input name="invoice" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
+      <label class="checkbox invoice-confirm" hidden><input type="checkbox" name="invoiceRecent"> Je confirme que cette facture date de moins de 3 mois</label>
+      <p class="muted small">🔒 La facture n’est visible que par l’équipe RaYSun et elle est supprimée automatiquement après 10 jours.</p>
+    </fieldset>
+  </template>
+
+  <template id="sugg-template">
+    <form class="contrib-form sugg-form">
+      <h3>Proposer un lieu à prospecter</h3>
+      <p class="muted small">Un bâtiment avec une belle toiture, un gros consommateur, un endroit où vous connaissez quelqu’un : dites-nous où aller.</p>
+      <label>Nom du lieu * <input name="placeName" required placeholder="Ex. Basilique de Koekelberg"></label>
+      <label>Adresse <input name="address" placeholder="Rue, numéro, commune"></label>
+      <button type="button" class="btn secondary locate">Localiser sur la carte</button>
+      <p class="where muted small">Ou cliquez directement sur la carte.</p>
+      <label>Pourquoi ce lieu ? <textarea name="reason" rows="3" placeholder="Grande toiture, consommation importante, projet en cours…"></textarea></label>
+      <div class="row">
+        <label>Type de bâtiment
+          <select name="buildingType">
+            <option value="">—</option><option>Professionnel</option><option>Copropriété</option>
+            <option>Logement social</option><option>Bâtiment public</option><option>Autre</option>
+          </select>
+        </label>
+        <label>Région
+          <select name="region"><option>Bruxelles</option><option>Wallonie</option><option>Flandre</option></select>
+        </label>
+      </div>
+      <div class="row">
+        <label>Panneaux solaires sur place ?
+          <select name="hasPv"><option value="">—</option><option>Oui</option><option>Non</option><option>Je ne sais pas</option></select>
+        </label>
+        <label>Puissance (kWc) <input name="pvKwp" type="number" min="0" step="any"></label>
+      </div>
+      <p class="muted small">Maisons individuelles non acceptées. Voir « 🎯 Qui cibler en ce moment ? » dans la colonne de gauche.</p>
+      <div class="paths">
+        <label class="path">
+          <input type="radio" name="hasContact" value="yes" required>
+          <strong>J’ai un contact</strong>
+          <span>Je connais quelqu’un sur place.</span>
+        </label>
+        <label class="path">
+          <input type="radio" name="hasContact" value="no">
+          <strong>Pas de contact</strong>
+          <span>Je vous signale juste le lieu.</span>
+        </label>
+      </div>
+      <div class="contact-fields" hidden>
+        <label>Nom du contact * <input name="contactName"></label>
+        <label>Sa fonction <input name="contactFunction"></label>
+        <div class="row">
+          <label>Email <input name="contactEmail" type="email"></label>
+          <label>Téléphone <input name="contactPhone" type="tel"></label>
+        </div>
+        <label>Comment le connaissez-vous ? <input name="relation"></label>
+      </div>
+      <div class="energy-slot"></div>
+      <p class="error"></p>
+      <button type="submit" class="btn primary">Envoyer le lieu</button>
+    </form>
+  </template>
+
+  <template id="lead-template">
+    <form class="contrib-form lead-form">
+      <h3 class="form-title">Ajouter un immeuble</h3>
+      <label>Nom de l’immeuble / du site * <input name="name" required placeholder="Ex. Hôpital Delta — CHIREC"></label>
+      <!-- Vague et priorité ne sont plus affichées ; valeurs neutres gardées pour la base. -->
+      <input type="hidden" name="wave" value="1"><input type="hidden" name="priority" value="B">
+      <label>Adresse <input name="address" placeholder="Rue et numéro"></label>
+      <label>Commune <input name="municipality" placeholder="1160 Auderghem"></label>
+      <button type="button" class="btn secondary locate">Localiser sur la carte</button>
+      <p class="where muted small">Ou cliquez directement sur la carte.</p>
+      <label>Angle d’entrée <textarea name="pitch" rows="3"></textarea></label>
+      <label>Société(s) identifiée(s) <input name="companies"></label>
+      <label>Propriétaire / gestionnaire <input name="owner"></label>
+      <div class="row">
+        <label>Rôle visé dans CityWatt <input name="targetRole" placeholder="Producteur + consommateur"></label>
+        <label>Fonction à viser <input name="targetFunction"></label>
+      </div>
+      <div class="row">
+        <label>Solaire (kWc) <input name="solarKwp" placeholder="338 (est.)"></label>
+        <label>Production (MWh/an) <input name="productionMwh" type="number" min="0" step="any"></label>
+      </div>
+      <label>Consommation — borne basse (MWh/an) <input name="consumptionMwh" type="number" min="0" step="any"></label>
+      <label>Où nous en sommes <span class="muted small">(caché aux ambassadeurs)</span> <textarea name="status" rows="2"></textarea></label>
+      <p class="error"></p>
+      <button type="submit" class="btn primary">Enregistrer l’immeuble</button>
+      <button type="button" class="link danger delete-lead" hidden style="margin-top:12px">Supprimer cet immeuble</button>
+    </form>
+  </template>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+  <script src="support.js"></script>
+</body>
+</html>

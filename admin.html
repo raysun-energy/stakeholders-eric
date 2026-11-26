@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CityWatt — Suivi des contacts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { display: block; }
+    .wrap { padding: 16px; max-width: 1400px; margin: 0 auto; }
+    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 20px 0 12px; }
+    .toolbar h2 { margin: 0; font-size: 18px; flex: 1; }
+    .toolbar .btn.primary { width: auto; }
+    .toolbar .show-done { font-size: 14px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+    .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--bg); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    td small { color: var(--muted); display: block; }
+    td select, td textarea { min-width: 150px; }
+    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 10px 14px; }
+    .stat b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+    .member-form { display: grid; grid-template-columns: 2fr 2fr 1fr 1.5fr 2fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+    .target-editor { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 12px 14px; }
+    .target-editor textarea { width: 100%; font: inherit; font-size: 14px; }
+    .target-editor .btn { width: auto; margin-top: 8px; }
+    td input.org { min-width: 120px; }
+    .pw { display: flex; gap: 6px; }
+    .pw input { flex: 1; }
+    .pw .btn { padding: 8px 10px; }
+    .credentials { background: var(--accent-soft); border-radius: 14px; padding: 12px 14px; margin: 8px 0 12px; font-size: 14px; }
+    .credentials pre { white-space: pre-wrap; font: 13px/1.5 ui-monospace, Menlo, monospace; background: #fff; border-radius: 6px; padding: 10px; margin: 8px 0; }
+    .member-form label { font-size: 13px; }
+    .member-form .btn { width: auto; }
+    .member-form .send-email { grid-column: 1 / -1; margin: 0; }
+    @media (max-width: 760px) { .member-form { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body><div style="background:#141414;color:#FFE20C;font:600 13px Inter,system-ui,sans-serif;text-align:center;padding:6px 12px">Site de test · données réelles · version e8effb2</div>
+  <div id="login" class="overlay" hidden>
+    <form id="login-form" class="card">
+      <h1>CityWatt <span>Suivi équipe</span></h1>
+      <label>Votre email <input name="email" type="email" required autocomplete="email"></label>
+      <label>Mot de passe <input name="password" type="password" autocomplete="current-password"></label>
+      <p class="error" id="login-error"></p>
+      <p class="success" id="login-info" hidden></p>
+      <button type="submit" class="btn primary">Se connecter</button>
+      <button type="button" id="magic-link" class="link" style="margin-top:12px">Recevoir un lien de connexion par email</button>
+    </form>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">CityWatt <span>Suivi équipe</span></div>
+    <div class="user"><a href="https://meek-florentine-28add5.netlify.app/">Tous les outils</a><a href="dossiers.html">Dossiers apporteurs</a><a href="./">Carte</a><button class="link" onclick="signOut()">Se déconnecter</button></div>
+  </header>
+
+  <div class="wrap" id="content" hidden>
+    <div class="stats" id="stats"></div>
+
+    <div class="toolbar"><h2>🎯 Qui cibler en ce moment ?</h2></div>
+    <div class="target-editor">
+      <p class="muted small" style="margin-top:0">Ce texte s’affiche sur la carte pour tous les actionnaires et ambassadeurs. Modifiez-le ici : c’est visible immédiatement, sans redéploiement.</p>
+      <textarea id="target" rows="9"></textarea>
+      <button class="btn primary" id="save-target">Enregistrer</button>
+      <span class="muted small" id="target-info"></span>
+    </div>
+
+    <div id="requests-block" hidden>
+      <div class="toolbar"><h2>Demandes d’accès à valider</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Personne</th><th>Société</th><th>Message</th><th>Rôle donné</th><th></th></tr></thead>
+          <tbody id="requests"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <h2>Contacts proposés</h2>
+      <label class="show-done"><input type="checkbox" id="show-done"> Afficher les traités (<span id="done-count">0</span>)</label>
+      <button class="btn primary" id="export">Exporter pour Excel (CSV)</button>
+    </div>
+    <p class="error" id="error"></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Immeuble</th><th>Proposé par</th><th>Contact</th><th>Chemin</th>
+            <th>Lien</th><th>Quand / remarques</th><th>Données énergie</th><th>Suivi</th><th>Notes équipe</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+    <div class="toolbar"><h2>Lieux proposés par les ambassadeurs</h2>
+      <label class="show-done"><input type="checkbox" id="show-done-sugg"> Afficher les traités (<span id="done-count-sugg">0</span>)</label></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Lieu</th><th>Proposé par</th><th>Pourquoi</th><th>Critères</th><th>Contact sur place</th><th>Données énergie</th><th>Suivi</th><th>Notes équipe</th><th></th></tr></thead>
+        <tbody id="suggestions"></tbody>
+      </table>
+    </div>
+
+    <div class="toolbar"><h2>Fiches Odoo créées depuis la carte</h2></div>
+    <p class="muted small">Entreprises envoyées dans Odoo depuis la recherche de la carte. Celles d’un apporteur d’affaires sont aussi dans ses dossiers.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Entreprise</th><th>Créée par</th><th>Arrive dans</th><th>Odoo</th></tr></thead>
+        <tbody id="map-fiches"></tbody>
+      </table>
+    </div>
+
+    <div class="toolbar"><h2>Qui a accès</h2></div>
+    <p class="muted small">Deux façons de donner accès :
+      <b>avec un mot de passe</b> (recommandé) — remplissez le mot de passe ou cliquez sur « Générer », puis transmettez vous-même les identifiants à la personne ;
+      <b>sans mot de passe</b> — la personne se connecte avec « Recevoir un lien de connexion » envoyé à cet email.
+      Pour changer le mot de passe de quelqu’un, refaites la même chose avec son email.</p>
+    <form class="member-form" id="member-form">
+      <label>Email <input name="email" type="email" required></label>
+      <label>Nom affiché <input name="name" required></label>
+      <label>Rôle
+        <select name="role">
+          <option value="shareholder">Actionnaire</option>
+          <option value="ambassador">Ambassadeur</option>
+          <option value="admin">Équipe</option>
+        </select>
+      </label>
+      <label>Organisation <input name="organisation" placeholder="Ex. Trinergy"></label>
+      <label>Mot de passe <span class="muted">(optionnel)</span>
+        <span class="pw"><input name="password" type="text" autocomplete="off" minlength="8" placeholder="8 caractères minimum">
+        <button type="button" class="btn secondary" id="gen-password">Générer</button></span>
+      </label>
+      <button class="btn primary" type="submit">Ajouter</button>
+      <label class="checkbox send-email"><input type="checkbox" name="sendEmail" id="send-email" checked>
+        Envoyer les accès par email à la personne (Brevo, depuis eric.rw@raysun.solar) — aussi pour « Nouveau mot de passe »</label>
+    </form>
+    <p class="error" id="member-error"></p>
+    <div class="credentials" id="credentials" hidden></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nom</th><th>Email</th><th>Organisation</th><th>Rôle</th><th>Statut</th><th></th></tr></thead>
+        <tbody id="members"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="vendor/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="support.js"></script>
+  <script>
+    const FOLLOW_UP = ['Nouveau', 'En cours', 'Rendez-vous obtenu', 'Sans suite', 'Traité'];
+    // « Traité » : masqué des tableaux (sauf case cochée) et de la carte ; compte dans le suivi commercial.
+    const DONE = 'Traité';
+    const ROLES = { shareholder: 'Actionnaire', ambassador: 'Ambassadeur', admin: 'Équipe' };
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let rows = [];
+    const MODES = { intro: 'Introduction', contact: 'Contact transmis', data: 'Données du bâtiment' };
+
+    // Données énergie + facture (contacts et lieux proposés). La facture s'ouvre via un lien de 2 minutes.
+    function energyHtml(r) {
+      const formula = (f, d, bi) => [f, bi ? 'bi-horaire' : null, d].filter(Boolean).join(' · ');
+      const lines = [
+        r.consumption_mwh != null ? `Conso : ${r.consumption_mwh} MWh/an` : null,
+        r.injection_mwh != null ? `Injection : ${r.injection_mwh} MWh/an` : null,
+        r.supplier ? `Fournisseur : ${r.supplier}` : null,
+        formula(r.offtake_formula, r.offtake_detail, r.offtake_bihoraire) ? `Prélèvement : ${formula(r.offtake_formula, r.offtake_detail, r.offtake_bihoraire)}` : null,
+        formula(r.injection_formula, r.injection_detail) ? `Injection (prix) : ${formula(r.injection_formula, r.injection_detail)}` : null,
+      ].filter(Boolean).map((l) => `<small>${esc(l)}</small>`).join('');
+      const invoice = r.invoice_path
+        ? `<button class="link" data-invoice="${esc(r.invoice_path)}">📄 Voir la facture</button>`
+        : r.invoice_uploaded_at ? '<small>Facture supprimée (10 jours)</small>' : '';
+      return lines + invoice || '<span class="muted">—</span>';
+    }
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-invoice]');
+      if (!btn) return;
+      const win = window.open('', '_blank');
+      const { data, error } = await sb.storage.from('amb-invoices').createSignedUrl(btn.dataset.invoice, 120);
+      if (error) { win?.close(); alert('Facture introuvable (elle est supprimée après 10 jours).'); return; }
+      if (win) win.location = data.signedUrl; else location.href = data.signedUrl;
+    });
+
+    async function loadTarget() {
+      const { data, error } = await sb.from('amb_settings').select('value, updated_at').eq('key', 'target').maybeSingle();
+      if (error) throw error;
+      document.getElementById('target').value = data?.value || '';
+      document.getElementById('target-info').textContent = data ? `Dernière modification : ${new Date(data.updated_at).toLocaleString('fr-BE')}` : '';
+    }
+
+    document.getElementById('save-target').addEventListener('click', async () => {
+      const value = document.getElementById('target').value.trim();
+      const { error } = await sb.from('amb_settings').upsert({ key: 'target', value, updated_at: new Date().toISOString() });
+      document.getElementById('target-info').textContent = error ? 'Enregistrement impossible.' : 'Enregistré ✓ — visible sur la carte au prochain chargement.';
+    });
+
+    async function loadContributions() {
+      const { data, error } = await sb.from('amb_contributions')
+        .select('*, amb_leads(name)').order('created_at', { ascending: false });
+      if (error) throw error;
+      rows = data;
+
+      const people = new Set(rows.map((c) => c.author_id));
+      document.getElementById('stats').innerHTML = [
+        [rows.length, 'contacts proposés'],
+        [new Set(rows.map((c) => c.lead_id)).size, 'immeubles couverts'],
+        [people.size, 'ambassadeurs actifs'],
+        [rows.filter((c) => c.follow_up === 'Rendez-vous obtenu').length, 'rendez-vous obtenus'],
+        [rows.filter((c) => c.mode === 'data' || c.invoice_path || c.consumption_mwh != null).length, 'données transmises'],
+      ].map(([n, l]) => `<div class="stat"><b>${n}</b>${l}</div>`).join('');
+
+      renderContributions();
+    }
+
+    function renderContributions() {
+      const done = rows.filter((c) => c.follow_up === DONE).length;
+      document.getElementById('done-count').textContent = done;
+      const showDone = document.getElementById('show-done').checked;
+      const visible = rows.filter((c) => showDone || c.follow_up !== DONE);
+      document.getElementById('rows').innerHTML = visible.map((c) => `
+        <tr>
+          <td>${esc(c.created_at.slice(0, 10))}</td>
+          <td><a href="./#${esc(c.lead_id)}">${esc(c.amb_leads?.name)}</a></td>
+          <td>${esc(c.author_name)}</td>
+          <td><strong>${esc(c.contact_name || '—')}</strong>
+            <small>${esc([c.contact_function, c.contact_company].filter(Boolean).join(' · '))}</small>
+            <small>${esc([c.contact_email, c.contact_phone].filter(Boolean).join(' · '))}</small></td>
+          <td>${MODES[c.mode] || esc(c.mode)}${c.mode === 'contact' ? `<small>${c.mention_name ? 'Peut être cité' : 'Ne pas citer'}</small>` : ''}</td>
+          <td>${esc(c.strength)}<small>${esc(c.relation)}</small></td>
+          <td>${esc(c.when_text)}<small>${esc(c.remarks)}</small></td>
+          <td>${energyHtml(c)}</td>
+          <td><select data-id="${esc(c.id)}" data-field="follow_up">
+            ${FOLLOW_UP.map((o) => `<option${o === c.follow_up ? ' selected' : ''}>${esc(o)}</option>`).join('')}
+          </select></td>
+          <td><textarea rows="2" data-id="${esc(c.id)}" data-field="team_notes">${esc(c.team_notes)}</textarea></td>
+          <td><button class="link danger" data-delete="amb_contributions" data-id="${esc(c.id)}" title="Supprimer ce contact">Supprimer</button></td>
+        </tr>`).join('') || `<tr><td colspan="11" class="muted">${done ? 'Tous les contacts sont traités.' : 'Aucun contact pour l’instant.'}</td></tr>`;
+
+      document.querySelectorAll('#rows [data-field]').forEach((el) => el.addEventListener('change', async () => {
+        const { error } = await sb.from('amb_contributions').update({ [el.dataset.field]: el.value }).eq('id', el.dataset.id);
+        document.getElementById('error').textContent = error ? 'Modification non enregistrée.' : '';
+        const row = rows.find((r) => r.id === el.dataset.id);
+        if (!error && row) row[el.dataset.field] = el.value;
+        if (!error && el.dataset.field === 'follow_up') renderContributions();
+      }));
+    }
+
+    let members = [];
+    let myEmail = '';
+
+    async function loadMembers() {
+      const { data, error } = await sb.rpc('amb_list_members');
+      if (error) throw error;
+      members = data;
+      document.getElementById('members').innerHTML = data.map((m, i) => `
+        <tr><td>${esc(m.name)}</td><td>${esc(m.email)}</td>
+          <td><input class="org" data-org="${i}" value="${esc(m.organisation)}" placeholder="—"></td>
+          <td>${esc(ROLES[m.role] ?? 'Apporteur d’affaires')}</td>
+          <td>${m.pending ? 'Invité, pas encore connecté' : 'Actif'}</td>
+          <td style="white-space:nowrap">
+            <button class="link" data-reset="${i}" title="Créer un nouveau mot de passe à lui transmettre">Nouveau mot de passe</button>
+            ${m.email.toLowerCase() === myEmail ? '' : `· <button class="link danger" data-remove="${i}">Retirer l’accès</button>`}
+          </td></tr>`).join('');
+    }
+
+    function generatePassword() {
+      const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const rnd = crypto.getRandomValues(new Uint32Array(12));
+      return Array.from(rnd, (n) => chars[n % chars.length]).join('').replace(/(.{4})(?=.)/g, '$1-');
+    }
+
+    // Crée le compte (ou change son mot de passe) côté serveur, puis affiche le message à transmettre.
+    async function setPassword({ email, name, role, password, organisation }) {
+      const errEl = document.getElementById('member-error');
+      const box = document.getElementById('credentials');
+      errEl.textContent = '';
+      box.hidden = true;
+      const sendEmail = document.getElementById('send-email').checked;
+      const { data, error } = await sb.functions.invoke('amb-admin-user',
+        { body: { email, name, role, password, organisation, send_email: sendEmail } });
+      if (error || !data?.ok) {
+        let msg = data?.error;
+        try { msg = msg || (await error.context.json()).error; } catch {}
+        errEl.textContent = msg || 'Création du compte impossible.';
+        return false;
+      }
+      const site = location.origin + location.pathname.replace(/admin\.html$/, '');
+      const message = `Bonjour ${name},\n\nVoici votre accès à l’espace ambassadeurs CityWatt :\n${site}\n\nEmail : ${data.email}\nMot de passe : ${password}\n\nÀ bientôt,\nEric`;
+      const sent = data.emailed
+        ? ' <b>Les accès lui ont été envoyés par email.</b> Pensez à lui dire de vérifier ses spams. Message de secours :'
+        : `${data.email_error ? ` <b>L’email n’a pas pu partir</b> (${esc(data.email_error)}).` : ''} Transmettez-lui ce message (par email, WhatsApp…) :`;
+      box.innerHTML = `<strong>${data.existing ? 'Nouveau mot de passe' : 'Compte créé'} pour ${esc(data.email)}.</strong>${sent}
+        <pre id="credentials-text">${esc(message)}</pre>
+        <button type="button" class="btn secondary" id="copy-credentials">Copier le message</button>`;
+      box.hidden = false;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('copy-credentials').addEventListener('click', async (ev) => {
+        await navigator.clipboard.writeText(message).catch(() => {});
+        ev.target.textContent = 'Copié ✓';
+      });
+      await loadMembers();
+      return true;
+    }
+
+    async function setOrganisation(email, organisation) {
+      const { error } = await sb.rpc('amb_set_member_org', { p_email: email, p_org: organisation || '' });
+      document.getElementById('member-error').textContent = error ? 'Organisation non enregistrée.' : '';
+      return !error;
+    }
+
+    document.getElementById('members').addEventListener('change', (e) => {
+      const input = e.target.closest('[data-org]');
+      if (input) setOrganisation(members[input.dataset.org].email, input.value);
+    });
+
+    document.getElementById('members').addEventListener('click', async (e) => {
+      const reset = e.target.closest('[data-reset]');
+      const remove = e.target.closest('[data-remove]');
+      if (reset) {
+        const m = members[reset.dataset.reset];
+        if (!confirm(`Créer un nouveau mot de passe pour ${m.name} (${m.email}) ? L’ancien ne fonctionnera plus.`)) return;
+        await setPassword({ email: m.email, name: m.name, role: m.role, password: generatePassword() });
+      }
+      if (remove) {
+        const m = members[remove.dataset.remove];
+        if (!confirm(`Retirer l’accès de ${m.name} (${m.email}) ? Ce qu’il ou elle a déjà proposé reste dans l’historique.`)) return;
+        const { error } = await sb.rpc('amb_remove_member', { p_email: m.email });
+        document.getElementById('member-error').textContent = error ? error.message : '';
+        if (!error) loadMembers();
+      }
+    });
+
+    // Mot de passe lisible (sans 0/O, 1/l/I) à dicter ou copier facilement.
+    document.getElementById('gen-password').addEventListener('click', () => {
+      document.querySelector('#member-form [name=password]').value = generatePassword();
+    });
+
+    document.getElementById('member-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target).entries());
+      const errEl = document.getElementById('member-error');
+      const box = document.getElementById('credentials');
+      errEl.textContent = '';
+      box.hidden = true;
+      if (!f.password) {
+        // Sans mot de passe : invitation, la personne se connectera par lien email.
+        const { error } = await sb.rpc('amb_upsert_member', { p_email: f.email, p_role: f.role, p_name: f.name });
+        errEl.textContent = error ? error.message : '';
+        if (!error) {
+          if (f.organisation) await setOrganisation(f.email, f.organisation);
+          e.target.reset();
+          loadMembers();
+        }
+        return;
+      }
+      // Avec mot de passe : compte créé (ou mot de passe changé) côté serveur, identifiants à transmettre.
+      if (await setPassword({ email: f.email, name: f.name, role: f.role, password: f.password, organisation: f.organisation })) {
+        e.target.reset();
+        document.getElementById('send-email').checked = true;
+      }
+    });
+
+    // CSV au format de l'onglet « Vos contacts » ; « ; » et BOM pour qu'Excel (réglages belges) l'ouvre correctement.
+    document.getElementById('export').addEventListener('click', () => {
+      const header = ['Date', 'Actionnaire / ambassadeur', 'Immeuble / société concernée', 'Votre contact (nom)', 'Sa fonction',
+        'Société du contact', 'Email du contact', 'Téléphone du contact', 'Comment vous le connaissez', 'Qualité du lien',
+        'Ce que vous acceptez de faire', 'Peut-on citer votre nom ?', 'Quand', 'Remarques',
+        'Consommation (MWh/an)', 'Injection (MWh/an)', 'Fournisseur', 'Formule de prélèvement', 'Bi-horaire',
+        'Détail prélèvement', 'Formule d’injection', 'Détail injection', 'Facture jointe', 'Suivi', 'Notes équipe'];
+      const lines = rows.map((c) => [c.created_at.slice(0, 10), c.author_name, c.amb_leads?.name, c.contact_name,
+        c.contact_function, c.contact_company, c.contact_email, c.contact_phone, c.relation, c.strength,
+        { intro: 'Je fais l’introduction', contact: 'Je vous donne le contact', data: 'J’ai des données sur ce bâtiment' }[c.mode],
+        c.mention_name ? 'Oui' : 'Non', c.when_text, c.remarks,
+        c.consumption_mwh, c.injection_mwh, c.supplier, c.offtake_formula, c.offtake_bihoraire ? 'Oui' : '',
+        c.offtake_detail, c.injection_formula, c.injection_detail, c.invoice_uploaded_at ? 'Oui' : '',
+        c.follow_up, c.team_notes]);
+      const csv = [header, ...lines]
+        .map((l) => l.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = `CityWatt_contacts_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+    });
+
+    async function loadRequests() {
+      const { data, error } = await sb.from('amb_access_requests').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      const pending = data.filter((r) => r.status === 'pending');
+      document.getElementById('requests-block').hidden = !pending.length;
+      document.getElementById('requests').innerHTML = pending.map((r) => `
+        <tr>
+          <td>${esc(r.created_at.slice(0, 10))}</td>
+          <td><strong>${esc(r.name)}</strong><small>${esc(r.email)}</small></td>
+          <td>${esc(r.company)}</td>
+          <td>${esc(r.message)}<small>Se présente comme : ${esc(ROLES[r.requested_role])}</small></td>
+          <td><select data-role="${esc(r.id)}">
+            ${Object.entries(ROLES).map(([k, v]) => `<option value="${k}"${k === r.requested_role ? ' selected' : ''}>${v}</option>`).join('')}
+          </select></td>
+          <td style="white-space:nowrap">
+            <button class="btn primary" style="width:auto" data-approve="${esc(r.id)}">Accepter</button>
+            <button class="link" data-reject="${esc(r.id)}">Refuser</button>
+          </td>
+        </tr>`).join('');
+      const decide = async (id, approve) => {
+        const role = document.querySelector(`[data-role="${id}"]`).value;
+        const { error } = await sb.rpc('amb_decide_request', { p_id: id, p_approve: approve, p_role: role });
+        document.getElementById('error').textContent = error ? error.message : '';
+        await Promise.all([loadRequests(), loadMembers()]);
+      };
+      document.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => decide(b.dataset.approve, true)));
+      document.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => {
+        if (confirm('Refuser cette demande ?')) decide(b.dataset.reject, false);
+      }));
+    }
+
+    const SUGG_FOLLOW_UP = ['Nouveau', 'À étudier', 'Retenu', 'Converti', 'Écarté', DONE];
+    let suggestions = [];
+    async function loadMapFiches() {
+      const { data, error } = await sb.rpc('amb_map_fiches');
+      if (error) throw error;
+      document.getElementById('map-fiches').innerHTML = data.length ? data.map((f) => `
+        <tr>
+          <td>${esc(f.envoye_le.slice(0, 10))}</td>
+          <td>${esc(f.nom)}<small>${esc(f.adresse)}</small></td>
+          <td>${esc(f.envoye_par_nom)}</td>
+          <td>${f.envoye_par_org ? `Dossiers de ${esc(f.envoye_par_org)}` : 'Suivi équipe'}</td>
+          <td><a href="https://raysun.odoo.com/odoo/crm/${Number(f.odoo_lead_id)}" target="_blank" rel="noopener">Ouvrir la fiche</a></td>
+        </tr>`).join('') : '<tr><td colspan="5" class="muted">Aucune fiche créée depuis la carte pour le moment.</td></tr>';
+    }
+
+    async function loadSuggestions() {
+      const { data, error } = await sb.from('amb_suggestions').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      suggestions = data;
+      renderSuggestions();
+    }
+
+    function renderSuggestions() {
+      const done = suggestions.filter((s) => s.follow_up === DONE).length;
+      document.getElementById('done-count-sugg').textContent = done;
+      const showDone = document.getElementById('show-done-sugg').checked;
+      const visible = suggestions.filter((s) => showDone || s.follow_up !== DONE);
+      document.getElementById('suggestions').innerHTML = visible.map((s) => `
+        <tr>
+          <td>${esc(s.created_at.slice(0, 10))}</td>
+          <td><a href="./#lieu-${esc(s.id)}">${esc(s.place_name)}</a><small>${esc(s.address)}</small></td>
+          <td>${esc(s.author_name)}</td>
+          <td>${esc(s.reason)}</td>
+          <td>${[s.building_type, s.region, s.has_pv ? `PV : ${s.has_pv}${s.pv_kwp != null ? ` (${s.pv_kwp} kWc)` : ''}` : null]
+            .filter(Boolean).map((x) => `<small>${esc(x)}</small>`).join('') || '<span class="muted">—</span>'}</td>
+          <td>${s.has_contact ? `<strong>${esc(s.contact_name)}</strong>
+            <small>${esc(s.contact_function)}</small>
+            <small>${esc([s.contact_email, s.contact_phone].filter(Boolean).join(' · '))}</small>
+            <small>${esc(s.relation)}</small>` : '<span class="muted">Pas de contact</span>'}</td>
+          <td>${energyHtml(s)}</td>
+          <td><select data-sugg="${esc(s.id)}" data-sfield="follow_up">
+            ${SUGG_FOLLOW_UP.map((o) => `<option${o === s.follow_up ? ' selected' : ''}>${esc(o)}</option>`).join('')}
+          </select></td>
+          <td><textarea rows="2" data-sugg="${esc(s.id)}" data-sfield="team_notes">${esc(s.team_notes)}</textarea></td>
+          <td><button class="link danger" data-delete="amb_suggestions" data-id="${esc(s.id)}" title="Supprimer ce lieu">Supprimer</button></td>
+        </tr>`).join('') || `<tr><td colspan="11" class="muted">${done ? 'Tous les lieux sont traités.' : 'Aucun lieu proposé pour l’instant.'}</td></tr>`;
+      document.querySelectorAll('[data-sfield]').forEach((el) => el.addEventListener('change', async () => {
+        const { error } = await sb.from('amb_suggestions').update({ [el.dataset.sfield]: el.value || null }).eq('id', el.dataset.sugg);
+        document.getElementById('error').textContent = error ? 'Modification non enregistrée.' : '';
+        const row = suggestions.find((x) => x.id === el.dataset.sugg);
+        if (!error && row) row[el.dataset.sfield] = el.value || null;
+        if (!error && el.dataset.sfield === 'follow_up') renderSuggestions();
+      }));
+    }
+    document.getElementById('show-done').addEventListener('change', renderContributions);
+    document.getElementById('show-done-sugg').addEventListener('change', renderSuggestions);
+
+    // Suppression définitive (tests, doublons, erreurs). Réservée à l'équipe par les règles de la base.
+    const DELETE_LABELS = { amb_contributions: 'ce contact', amb_suggestions: 'ce lieu' };
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-delete]');
+      if (!btn) return;
+      const table = btn.dataset.delete;
+      if (!confirm(`Supprimer définitivement ${DELETE_LABELS[table]} ? Cette action est irréversible.`)) return;
+      const { error, count } = await sb.from(table).delete({ count: 'exact' }).eq('id', btn.dataset.id);
+      document.getElementById('error').textContent = error || !count ? 'Suppression impossible.' : '';
+      if (error) console.error(error);
+      await (table === 'amb_contributions' ? loadContributions() : loadSuggestions());
+    });
+
+    async function start() {
+      const who = await currentMember();
+      if (!who) { document.getElementById('login').hidden = false; return; }
+      if (who.member?.role !== 'admin') { location.href = './'; return; }
+      myEmail = (who.user.email || '').toLowerCase();
+      document.getElementById('login').hidden = true;
+      document.getElementById('content').hidden = false;
+      await Promise.all([loadContributions(), loadMembers(), loadRequests(), loadSuggestions(), loadTarget(), loadMapFiches()]);
+    }
+
+    wireLoginForm(start);
+    start().catch((e) => { console.error(e); document.getElementById('error').textContent = 'Erreur de chargement.'; });
+  </script>
+</body>
+</html>

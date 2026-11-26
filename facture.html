@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Envoyer ma facture d'électricité · RaYSun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #F8F3EA; --ink: #141414; --line: #E3DBCB; --accent: #C8742A; --muted: #6B6A66; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 Inter, system-ui, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 28px 16px 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; margin-bottom: 22px; }
+  .sun { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #FFE20C, #FF8001); }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 22px; }
+  h1 { font-size: 24px; line-height: 1.15; margin: 0 0 8px; }
+  p { margin: 0 0 12px; } .muted { color: var(--muted); font-size: 14px; }
+  label { display: block; font-size: 14px; font-weight: 600; margin-top: 14px; }
+  input { width: 100%; margin-top: 5px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; font: inherit; background: #fff; }
+  input:focus { outline: 2px solid #FF8001; outline-offset: -1px; }
+  button { margin-top: 20px; width: 100%; border: 0; border-radius: 999px; padding: 13px 18px; font: inherit; font-weight: 700; background: var(--ink); color: #fff; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: default; }
+  #msg { margin-top: 14px; font-size: 14px; } #msg.error { color: #B83A2C; }
+  .done { text-align: center; padding: 10px 0; } .done b { display: block; font-size: 20px; margin-bottom: 6px; }
+</style>
+</head>
+<body><div style="background:#141414;color:#FFE20C;font:600 13px Inter,system-ui,sans-serif;text-align:center;padding:6px 12px">Site de test · données réelles · version e8effb2</div>
+<main>
+  <div class="brand"><span class="sun" aria-hidden="true"></span>RaYSun</div>
+  <div class="card">
+    <div id="form-box">
+      <h1>Envoyer ma facture d'électricité</h1>
+      <p id="intro">Pour activer votre partage d'énergie, nous avons besoin de votre dernière facture d'électricité : le code EAN de votre logement y figure. Vous n'avez rien d'autre à remplir.</p>
+      <form id="f" novalidate>
+        <label>Votre dernière facture (PDF ou photo, 10 Mo au plus)
+          <input name="fichier" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,application/pdf,image/*"></label>
+        <button type="submit">Envoyer ma facture</button>
+        <p id="msg" role="status"></p>
+      </form>
+      <p class="muted" style="margin-top:14px">Votre facture est transmise à RaYSun, gestionnaire du partage, uniquement pour identifier votre compteur. Une question : hi@raysun.solar.</p>
+    </div>
+    <div id="done" class="done" hidden><b>Merci, votre facture est bien arrivée.</b><p class="muted">Vous pouvez fermer cette page. Nous revenons vers vous dès que votre partage est activé.</p></div>
+  </div>
+</main>
+<script src="config.js"></script>
+<script>
+  // Page publique : la campagne vient de l'adresse (facture.html?c=residence-brillant).
+  const campagne = new URLSearchParams(location.search).get('c') || '';
+  const f = document.getElementById('f'), msg = document.getElementById('msg'), btn = f.querySelector('button');
+  const fail = (t) => { msg.className = 'error'; msg.textContent = t; };
+  if (!campagne) { f.hidden = true; document.getElementById('intro').textContent = 'Ce lien est incomplet. Utilisez le lien reçu après la signature de votre contrat.'; }
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = f.fichier.files[0];
+    if (!file) return fail('Joignez votre facture.');
+    if (file.size > 10 * 1024 * 1024) return fail('Fichier trop lourd : 10 Mo au plus.');
+    const body = new FormData(f); body.set('campagne', campagne);
+    btn.disabled = true; msg.className = ''; msg.textContent = 'Envoi en cours…';
+    try {
+      const res = await fetch(window.CITYWATT_CONFIG.supabaseUrl + '/functions/v1/amb-facture-depot', { method: 'POST', body });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || 'Le dépôt a échoué. Réessayez dans un instant.');
+      document.getElementById('form-box').hidden = true; document.getElementById('done').hidden = false;
+    } catch (err) { fail(err.message); btn.disabled = false; }
+  });
+</script>
+</body>
+</html>
