@@ -1,0 +1,4 @@
+-- Dépôt public d'une facture d'électricité (page site/facture.html?c=<campagne>, fonction amb-facture-depot). Appliqué le 26/11/2026.
+-- Tables : amb_depot_campagnes (slug, label, active ; une ligne « residence-brillant ») et amb_facture_depots
+-- (campagne, nom, email, boite, path dans le compartiment amb-invoices, notified_at). Lecture réservée à l'équipe ;
+-- l'écriture passe uniquement par la fonction, avec la clé de service.
