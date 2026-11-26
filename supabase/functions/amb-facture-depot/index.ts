@@ -1,5 +1,6 @@
 // Dépôt public d'une facture d'électricité (page facture.html, sans connexion).
-// POST multipart : campagne, nom, email, boite (facultatif), fichier (PDF ou photo, 10 Mo au plus).
+// POST multipart : campagne et fichier (PDF ou photo, 10 Mo au plus). Rien d'autre à remplir : le nom, l'adresse et le code EAN
+// se lisent sur la facture. Les champs nom, email et boite restent acceptés s'ils sont fournis.
 // La campagne doit exister et être active (table amb_depot_campagnes) ; 30 dépôts par heure au plus par campagne.
 // Le fichier est rangé dans le compartiment privé amb-invoices (purgé après 10 jours) et envoyé par e-mail à l'équipe, via Odoo.
 // Secrets : ODOO_USERNAME, ODOO_API_KEY ; optionnels ODOO_URL, ODOO_DB, NOTIFY_EMAIL.
@@ -32,8 +33,7 @@ Deno.serve(async (req) => {
     const file = form.get('fichier');
     const { data: camp } = await sb.from('amb_depot_campagnes').select('label').eq('slug', campagne).eq('active', true).maybeSingle();
     if (!camp) return json({ error: 'Ce lien de dépôt n’est plus valable.' }, 404);
-    if (nom.length < 2) return json({ error: 'Indiquez votre nom.' }, 400);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'Adresse e-mail invalide.' }, 400);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'Adresse e-mail invalide.' }, 400);
     if (!(file instanceof File) || !file.size) return json({ error: 'Joignez votre facture.' }, 400);
     const ext = TYPES[file.type];
     if (!ext) return json({ error: 'Format refusé : envoyez un PDF ou une photo (JPG, PNG, HEIC).' }, 400);
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const path = `depot/${campagne}/${crypto.randomUUID()}.${ext}`;
     const up = await sb.storage.from('amb-invoices').upload(path, bytes, { contentType: file.type });
     if (up.error) throw new Error(up.error.message);
-    const { data: row, error } = await sb.from('amb_facture_depots').insert({ campagne, nom, email, boite: boite || null, path }).select('id').single();
+    const { data: row, error } = await sb.from('amb_facture_depots').insert({ campagne, nom: nom || 'non indiqué', email: email || 'non indiqué', boite: boite || null, path }).select('id').single();
     if (error) throw new Error(error.message);
 
     // E-mail à l'équipe avec la facture jointe. Un échec d'envoi ne fait pas échouer le dépôt : le fichier est enregistré.
@@ -57,11 +57,11 @@ Deno.serve(async (req) => {
       if (!db) { const l = await rpc('db', 'list', []).catch(() => null); db = Array.isArray(l) && l.length === 1 ? l[0] : new URL(ODOO_URL).hostname.split('.')[0]; }
       const uid = await rpc('common', 'login', [db, login, key]);
       const exec = (model: string, method: string, args: unknown[]) => rpc('object', 'execute_kw', [db, uid, key, model, method, args]);
-      const att = await exec('ir.attachment', 'create', [{ name: `Facture ${nom}${boite ? ' boîte ' + boite : ''}.${ext}`, datas: encodeBase64(bytes), mimetype: file.type }]);
+      const att = await exec('ir.attachment', 'create', [{ name: `Facture ${camp.label}${nom ? ' ' + nom : ''}${boite ? ' boîte ' + boite : ''}.${ext}`, datas: encodeBase64(bytes), mimetype: file.type }]);
       const mail = await exec('mail.mail', 'create', [{
-        subject: `[${camp.label}] Facture d'électricité de ${nom}${boite ? ' (boîte ' + boite + ')' : ''}`, email_to: NOTIFY_EMAIL, reply_to: email, auto_delete: false,
+        subject: `[${camp.label}] Facture d'électricité déposée${nom ? ' par ' + nom : ''}${boite ? ' (boîte ' + boite + ')' : ''}`, email_to: NOTIFY_EMAIL, ...(email ? { reply_to: email } : {}), auto_delete: false,
         attachment_ids: [[6, 0, [att]]],
-        body_html: `<p><b>${esc(nom)}</b> a déposé sa dernière facture d'électricité pour <b>${esc(camp.label)}</b>.</p><p>E-mail : ${esc(email)}${boite ? '<br>Boîte : ' + esc(boite) : ''}</p><p>La facture est jointe : le code EAN du logement s'y trouve.</p>`,
+        body_html: `<p>Un occupant vient de déposer sa dernière facture d'électricité pour <b>${esc(camp.label)}</b>, après la signature de son contrat.</p>${nom || email || boite ? `<p>${[nom && 'Nom : ' + esc(nom), email && 'E-mail : ' + esc(email), boite && 'Boîte : ' + esc(boite)].filter(Boolean).join('<br>')}</p>` : ''}<p>La facture est jointe : le nom, l'adresse et le code EAN du logement s'y trouvent. Rapprochez-la du contrat signé dans Odoo Signature.</p>`,
       }]);
       await exec('mail.mail', 'send', [[mail]]).catch(() => {});
       await sb.from('amb_facture_depots').update({ notified_at: new Date().toISOString() }).eq('id', row.id);
